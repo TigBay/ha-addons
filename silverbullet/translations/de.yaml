@@ -1,0 +1,28 @@
+---
+configuration:
+  sb_user:
+    name: Benutzer und Passwort
+    description: >-
+      Zugangsdaten im Format benutzername:passwort. SilverBullet startet nie ohne
+      Authentifizierung. Das Standard-Passwort changeme sofort ändern.
+  space_path:
+    name: Space-Pfad
+    description: >-
+      Ordner mit den Markdown-Dateien. Standard ist /share/silverbullet/space.
+      Das AppArmor-Profil erlaubt nur Pfade unter /share/silverbullet/.
+  enable_mcp:
+    name: MCP-Bridge aktivieren
+    description: >-
+      Startet die MCP-Bridge für KI-Assistenten wie Claude. Benötigt das Plug
+      silverbullet-ai im Space und einen Port für 3033/tcp unter Netzwerk.
+  mcp_token:
+    name: MCP-Token
+    description: >-
+      Bearer-Token für die MCP-Bridge. Leer lassen erzeugt einen Token, der nur in
+      /data/mcp_token.txt liegt. Besser selbst einen langen, zufälligen Token setzen.
+  additional_args:
+    name: Zusätzliche Argumente
+    description: Optionale zusätzliche Startargumente für SilverBullet (durch Leerzeichen getrennt).
+network:
+  3000/tcp: SilverBullet Web-Oberfläche
+  3033/tcp: MCP-Bridge (nur bei aktivierter MCP-Bridge, Port standardmäßig nicht freigegeben)
