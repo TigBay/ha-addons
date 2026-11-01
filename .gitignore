@@ -1,0 +1,37 @@
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Docker
+.docker/
+
+# Temporary files
+*.tmp
+*.bak
+*.log
+
+# Credentials and local test folders (never commit)
+.env
+.env.*
+!.env.example
+*zugang*.txt
+*credentials*.txt
+sb-addon-test/
