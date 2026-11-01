@@ -45,6 +45,7 @@ map:
 host_network: false
 
 # Security
+apparmor: true
 privileged: []
 full_access: false
 
