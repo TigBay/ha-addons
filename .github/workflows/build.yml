@@ -1,0 +1,268 @@
+---
+# ==============================================================================
+# GitHub Actions – build workflow
+#
+# Runs on:  push to main (only when silverbullet/ changes)
+#           manually via workflow_dispatch
+#
+# Flow:
+#   1. prepare  – read the version from config.yaml, check whether it is already in GHCR
+#   2. build    – build the Docker image per architecture and push it to GHCR
+#   3. manifest – combine the multi-arch manifest
+#
+# Protection against overwriting: if ghcr.io/tigbay/ha-addons-silverbullet:<version>
+# already exists, the build is skipped. Only workflow_dispatch with force_push=true
+# rebuilds and overwrites a version on purpose.
+#
+# Prerequisites:
+#   - The GHCR package must be set to "Public" after the first push:
+#     GitHub → profile → Packages → ha-addons-silverbullet → Package settings
+#   - No manual secrets needed: GITHUB_TOKEN has packages: write permission
+# ==============================================================================
+name: Build SilverBullet Add-on
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'silverbullet/**'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+    inputs:
+      force_push:
+        description: 'Rebuild and overwrite an already published version'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BASE: ghcr.io/tigbay/ha-addons-silverbullet
+
+jobs:
+  # ─── Job 1: determine the version ───────────────────────────────────────────
+  prepare:
+    name: Determine version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      skip: ${{ steps.exists.outputs.skip }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Read the version from silverbullet/config.yaml
+        id: version
+        run: |
+          # Extract the version field from the YAML (plain grep, no yq needed)
+          VERSION=$(grep '^version:' silverbullet/config.yaml \
+            | awk '{print $2}' \
+            | tr -d '"' \
+            | tr -d "'" \
+            | xargs)
+
+          if [[ -z "${VERSION}" ]]; then
+            echo "❌ Could not read the version from silverbullet/config.yaml."
+            exit 1
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "✅ Version: ${VERSION}"
+
+      # Login is needed while the package is private (not readable anonymously)
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check whether the version is already in GHCR
+        id: exists
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          FORCE_PUSH: ${{ inputs.force_push }}
+        run: |
+          REF="${IMAGE_BASE}:${VERSION}"
+
+          # Only "not found" counts as "does not exist". Any other error
+          # (network, permissions) aborts, so nothing is overwritten by accident.
+          if OUT=$(docker manifest inspect "${REF}" 2>&1); then
+            EXISTS=true
+          elif grep -qiE 'no such manifest|manifest unknown|name unknown|not found' <<< "${OUT}"; then
+            EXISTS=false
+          else
+            echo "::error::Could not check ${REF}:"
+            echo "${OUT}"
+            exit 1
+          fi
+
+          SKIP=false
+          if [[ "${EXISTS}" == "true" && "${FORCE_PUSH}" != "true" ]]; then
+            SKIP=true
+            echo "⏭️  ${REF} already exists – skipping the build (force_push not set)."
+            {
+              echo "## ⏭️ Build skipped"
+              echo ""
+              echo "\`${REF}\` already exists. To overwrite it, start the workflow manually with \`force_push\`,"
+              echo "or raise the version in \`silverbullet/config.yaml\`."
+            } >> "$GITHUB_STEP_SUMMARY"
+          elif [[ "${EXISTS}" == "true" ]]; then
+            echo "⚠️  ${REF} already exists and is overwritten because of force_push."
+          else
+            echo "🆕 ${REF} does not exist yet – building."
+          fi
+
+          echo "skip=${SKIP}" >> "$GITHUB_OUTPUT"
+
+  # ─── Job 2: build the image per architecture ────────────────────────────────
+  build:
+    name: Build ${{ matrix.build_arch }}
+    needs: prepare
+    if: needs.prepare.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # AMD64 – standard x86_64 systems (e.g. Intel NUC, mini PC)
+          - platform: linux/amd64
+            build_arch: amd64
+
+          # AARCH64 – ARM64 (e.g. Raspberry Pi 4+, Apple Silicon server)
+          - platform: linux/arm64
+            build_arch: aarch64
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # QEMU for cross-platform builds (aarch64 on an amd64 runner)
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      # Docker Buildx for multi-arch builds
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Log in to GHCR (no manual secret needed)
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Generate image metadata (labels, tags)
+      - name: Generate image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_BASE }}
+          tags: |
+            type=raw,value=${{ needs.prepare.outputs.version }}-${{ matrix.build_arch }}
+          labels: |
+            org.opencontainers.image.title=SilverBullet HA Add-on (${{ matrix.build_arch }})
+            org.opencontainers.image.description=Self-hosted Markdown note-taking system for Home Assistant
+            org.opencontainers.image.version=${{ needs.prepare.outputs.version }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            io.hass.version=${{ needs.prepare.outputs.version }}
+            io.hass.arch=${{ matrix.build_arch }}
+            io.hass.type=app
+
+      # Build and push the architecture-specific image
+      # No 'latest' tag for production releases!
+      - name: Build and push the image (${{ matrix.build_arch }})
+        uses: docker/build-push-action@v6
+        with:
+          context: ./silverbullet
+          platforms: ${{ matrix.platform }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # The base image comes from the BUILD_FROM default in the Dockerfile
+          # (multi-arch image, buildx picks the platform).
+          # Build cache for faster follow-up builds
+          cache-from: type=gha,scope=${{ matrix.build_arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.build_arch }}
+          # Disable the provenance attestation (not all clients support it)
+          provenance: false
+
+  # ─── Job 3: create the multi-arch manifest ──────────────────────────────────
+  manifest:
+    name: Publish multi-arch manifest
+    needs: [prepare, build]
+    if: needs.prepare.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push the multi-arch manifest
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          IMAGE="${{ env.IMAGE_BASE }}"
+
+          echo "Creating the multi-arch manifest for version ${VERSION}..."
+
+          # Assemble the manifest from the architecture-specific images
+          docker manifest create \
+            "${IMAGE}:${VERSION}" \
+            "${IMAGE}:${VERSION}-amd64" \
+            "${IMAGE}:${VERSION}-aarch64"
+
+          # Add the architecture annotations
+          docker manifest annotate \
+            "${IMAGE}:${VERSION}" \
+            "${IMAGE}:${VERSION}-aarch64" \
+            --os linux --arch arm64 --variant v8
+
+          docker manifest annotate \
+            "${IMAGE}:${VERSION}" \
+            "${IMAGE}:${VERSION}-amd64" \
+            --os linux --arch amd64
+
+          # Push the manifest
+          docker manifest push "${IMAGE}:${VERSION}"
+
+          echo "✅ Multi-arch manifest published:"
+          echo "   ${IMAGE}:${VERSION}"
+          echo ""
+          echo "⚠️  If the package is private:"
+          echo "   GitHub → profile → Packages → ha-addons-silverbullet"
+          echo "   → Package settings → Change visibility → Public"
+
+      - name: Write the build summary
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          IMAGE="${{ env.IMAGE_BASE }}"
+
+          cat >> "$GITHUB_STEP_SUMMARY" << EOF
+          ## ✅ SilverBullet add-on published
+
+          **Version:** \`${VERSION}\`
+
+          **Images:**
+          - \`${IMAGE}:${VERSION}\` (multi-arch manifest)
+          - \`${IMAGE}:${VERSION}-amd64\`
+          - \`${IMAGE}:${VERSION}-aarch64\`
+
+          **Next steps:**
+          1. Make the package public on GitHub (if it is still private)
+          2. In Home Assistant: add-on store → reload
+          EOF

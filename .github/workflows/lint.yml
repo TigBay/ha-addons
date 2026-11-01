@@ -1,0 +1,149 @@
+---
+# ==============================================================================
+# GitHub Actions – lint workflow
+#
+# Runs on: pull requests and pushes to main
+# Purpose: ensure code quality and valid syntax
+# ==============================================================================
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  yamllint:
+    name: Check YAML syntax
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install yamllint
+        run: pip install yamllint
+
+      - name: Check YAML files
+        run: |
+          yamllint \
+            --config-data '{
+              extends: default,
+              rules: {
+                line-length: {max: 120},
+                document-start: disable,
+                truthy: {check-keys: false, allowed-values: ["true", "false"]}
+              }
+            }' \
+            repository.yaml \
+            silverbullet/config.yaml \
+            silverbullet/translations/de.yaml \
+            silverbullet/translations/en.yaml \
+            .github/workflows/lint.yml \
+            .github/workflows/build.yml
+
+  shellcheck:
+    name: Check shell scripts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          scandir: '.'
+          severity: warning
+          additional_files: 'run.sh'
+
+  hadolint:
+    name: Check Dockerfile
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Run Hadolint (Dockerfile linter)
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: silverbullet/Dockerfile
+          # DL3006: always use an explicit FROM tag – accepted, because of the BUILD_FROM arg
+          # DL3016: global npm install – required for the binary
+          # DL3018: apk add version pinning – deliberately left out
+          # DL3025: HEALTHCHECK CMD notation
+          ignore: DL3006,DL3016,DL3018,DL3025
+
+  markdown-links:
+    name: Check Markdown links
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Check Markdown links
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          use-verbose-mode: 'no'
+          config-file: '.github/mlc_config.json'
+        continue-on-error: true  # External links can be offline temporarily
+
+  config-validation:
+    name: Validate the add-on configuration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      - name: Validate config.yaml
+        run: |
+          python3 - <<'EOF'
+          import yaml
+          import sys
+
+          REQUIRED_KEYS = ["name", "description", "slug", "version", "arch", "startup",
+                           "boot", "options", "schema"]
+          REQUIRED_ARCHS = {"amd64", "aarch64"}
+
+          with open("silverbullet/config.yaml") as f:
+              config = yaml.safe_load(f)
+
+          errors = []
+
+          for key in REQUIRED_KEYS:
+              if key not in config:
+                  errors.append(f"Required field missing: {key}")
+
+          if "arch" in config:
+              provided = set(config["arch"])
+              missing = REQUIRED_ARCHS - provided
+              if missing:
+                  errors.append(f"Missing architectures: {missing}")
+
+          if "version" in config:
+              version = str(config["version"])
+              parts = version.split(".")
+              if len(parts) != 3:
+                  errors.append(f"Version must have the format YYYY.MM.PATCH, got: {version}")
+
+          if errors:
+              print("❌ Configuration errors:")
+              for e in errors:
+                  print(f"  - {e}")
+              sys.exit(1)
+          else:
+              print(f"✅ config.yaml is valid (version: {config['version']})")
+          EOF
