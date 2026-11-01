@@ -1,0 +1,118 @@
+---
+# ==============================================================================
+# GitHub Actions – follow the official SilverBullet releases
+#
+# Runs on:  a daily schedule and manually via workflow_dispatch
+#
+# Flow:
+#   1. Look for a newer release of silverbulletmd/silverbullet (no prereleases)
+#   2. Bump the Dockerfile pin, the add-on version and the changelog
+#   3. Build the image and run the smoke test
+#   4. Only if the test passes: push a branch and open a pull request
+#
+# Nothing is published here. After the pull request is merged, the build workflow
+# pushes the image to GHCR and creates the GitHub release.
+#
+# Secrets (optional): UPSTREAM_PR_TOKEN – a personal access token with write access
+# to contents and pull requests. Without it GITHUB_TOKEN is used, but then GitHub
+# does not start the regular workflows (e.g. lint) on the pull request. The smoke
+# test above runs in this workflow either way.
+# Repository setting: Settings → Actions → General → "Allow GitHub Actions to
+# create and approve pull requests".
+# ==============================================================================
+name: Update SilverBullet
+
+on:
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Upstream version to use (default: latest release)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: upstream-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Check for a new SilverBullet release
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.UPSTREAM_PR_TOKEN || secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.UPSTREAM_PR_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Look for a newer release and bump the files
+        id: bump
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: .github/scripts/bump-upstream.sh "${INPUT_VERSION}"
+
+      # A closed pull request counts as "declined": the version is not proposed again.
+      - name: Check for an existing pull request
+        id: existing
+        if: steps.bump.outputs.changed == 'true'
+        env:
+          UPSTREAM: ${{ steps.bump.outputs.upstream }}
+        run: |
+          COUNT=$(gh pr list --head "chore/silverbullet-${UPSTREAM}" --state all --json number --jq 'length')
+          if [[ "${COUNT}" != "0" ]]; then
+            echo "A pull request for ${UPSTREAM} already exists, nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build the image
+        if: steps.bump.outputs.changed == 'true' && steps.existing.outputs.skip != 'true'
+        run: docker build -t sb-smoke silverbullet
+
+      - name: Smoke test
+        if: steps.bump.outputs.changed == 'true' && steps.existing.outputs.skip != 'true'
+        env:
+          UPSTREAM: ${{ steps.bump.outputs.upstream }}
+        run: .github/scripts/smoke-test.sh sb-smoke "${UPSTREAM}"
+
+      - name: Open the pull request
+        if: steps.bump.outputs.changed == 'true' && steps.existing.outputs.skip != 'true'
+        env:
+          UPSTREAM: ${{ steps.bump.outputs.upstream }}
+          PREVIOUS: ${{ steps.bump.outputs.previous }}
+          ADDON_VERSION: ${{ steps.bump.outputs.addon_version }}
+        run: |
+          BRANCH="chore/silverbullet-${UPSTREAM}"
+          TITLE="chore(silverbullet): update SilverBullet to ${UPSTREAM}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "${BRANCH}"
+          git add silverbullet/Dockerfile silverbullet/config.yaml silverbullet/CHANGELOG.md
+          git commit -m "${TITLE}" \
+            -m "Raise the add-on version to ${ADDON_VERSION} and add a changelog entry."
+          git push origin "${BRANCH}"
+
+          cat > "${RUNNER_TEMP}/pr-body.md" <<EOF
+          Updates the bundled SilverBullet from ${PREVIOUS} to ${UPSTREAM}.
+
+          - Upstream release notes: https://github.com/silverbulletmd/silverbullet/releases/tag/${UPSTREAM}
+          - Add-on version: ${ADDON_VERSION}
+          - The image was built and passed the smoke test in this workflow run
+            (start, login protection, write/read/delete, clean stop).
+            Not covered: MCP bridge, Runtime API, aarch64, behavior on Home Assistant.
+
+          Merging this pull request (squash merge is recommended) starts the build workflow. It pushes
+          \`ghcr.io/tigbay/ha-addons-silverbullet:${ADDON_VERSION}\` to GHCR and creates the release
+          \`v${ADDON_VERSION}\`. Review the upstream release notes for breaking changes before merging.
+          EOF
+
+          gh pr create --base main --head "${BRANCH}" --title "${TITLE}" --body-file "${RUNNER_TEMP}/pr-body.md"

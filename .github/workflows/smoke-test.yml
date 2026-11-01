@@ -1,0 +1,43 @@
+---
+# ==============================================================================
+# GitHub Actions – smoke test
+#
+# Runs on: pull requests that change the add-on, and manually
+# Purpose: build the image and check that it starts, protects the space,
+#          serves pages and stops cleanly (no Home Assistant needed)
+# ==============================================================================
+name: Smoke test
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'silverbullet/**'
+      - '.github/scripts/smoke-test.sh'
+      - '.github/workflows/smoke-test.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-test:
+    name: Build and test the image (amd64)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Read the pinned SilverBullet version
+        id: pin
+        run: |
+          VERSION=$(sed -nE 's#^FROM ghcr\.io/silverbulletmd/silverbullet:([0-9.]+) AS .*#\1#p' silverbullet/Dockerfile)
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Build the image
+        run: docker build -t sb-smoke silverbullet
+
+      - name: Smoke test
+        env:
+          EXPECTED: ${{ steps.pin.outputs.version }}
+        run: .github/scripts/smoke-test.sh sb-smoke "${EXPECTED}"
