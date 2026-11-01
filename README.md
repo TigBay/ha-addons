@@ -182,29 +182,29 @@ flowchart LR
 
 ## Tested
 
-As of 2026-11-01, Home Assistant OS with Core 2026.10.4 on amd64. The test covered the app built locally by the
-Supervisor (slug `local_silverbullet`), before the image was published to GHCR.
+As of 2026-11-01, Home Assistant OS with Core 2026.10.4 on amd64. The test covered the published store version
+(slug `<hash>_silverbullet`, image `ghcr.io/tigbay/ha-addons-silverbullet:2026.10.0` pulled from GHCR, not built
+locally) after it replaced an earlier locally built copy of the same add-on.
 
 | Check | Result |
 |-------|--------|
-| Ports 3000 and 3033 free | ✅ |
 | `/.instance` answers with 200 (SilverBullet 2.12.1) | ✅ |
 | Login protection: 401 without login, cookie login works | ✅ |
-| Write, read and delete pages (PUT/GET/DELETE) | ✅ |
+| Write, read and delete a page (PUT/GET/DELETE) | ✅ |
 | `.silverbullet.auth.json` with permissions 600 | ✅ |
 | Runtime API with Chromium (`{"result":"Hello"}`) | ✅ |
+| MCP with the plug: 401 without token, `initialize`, `tools/list` (11 tools) | ✅ |
 | Stop with "shut down cleanly", restart | ✅ |
-| AppArmor profile loaded, no denials found | ✅, only an indication (only 915 kernel log lines readable) |
-| MCP without the plug: correct error message in the log | ✅ |
-| MCP with the plug: 401 without token, `initialize`, `tools/list` (11 tools), `read_note` | ✅ |
-| No token or password in the log | ✅ |
+| AppArmor profile installed by the Supervisor (`ha apps info` reports `apparmor: profile`) | ✅, denials not checked |
+| No token or password in the add-on log | ✅ (0 matches for each) |
 
-Measurements: build about 253 s (amd64, on the Home Assistant system), start until ready 5.7 s, stop 3.5 s,
-about 337 MB RAM and roughly 2 % CPU at idle (with Chromium).
+Measurements: stop 4.1 s, start until `/.instance` answers 5.7 s, about 345 MB RAM and 2.5 % CPU at idle (with
+Chromium). Right after the first start the add-on indexes the space, which temporarily used about 715 MB and 30 % CPU.
 
-The Space Lua queries of the example ([`examples/home-maintenance`](examples/home-maintenance/)) were checked on
-2026-11-01 in a local Docker container through the Runtime API, not on Home Assistant: all four queries returned
-the expected rows.
+The four Space Lua queries of the example ([`examples/home-maintenance`](examples/home-maintenance/)) were run
+on 2026-11-01 through the Runtime API of this instance against the three example pages. For the test the pages were
+stored under `HA-Test/maintenance/` and the folder prefix in the queries was changed accordingly. All four queries
+returned the expected rows, and the test pages were deleted afterwards.
 
 **Not tested:**
 
