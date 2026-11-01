@@ -304,8 +304,27 @@ docker run --rm -v "$PWD":/repo -w /repo rhysd/actionlint:latest
 3. Commit and push to `main`
 4. GitHub Actions builds automatically and pushes to GHCR. A version that is already in GHCR is not
    overwritten. For that, raise the version or start the workflow manually with `force_push`.
-5. Set the GHCR package to **Public** (only the first time):
+5. After a successful build the workflow creates the tag `vX` and a GitHub release from the changelog entry.
+6. Set the GHCR package to **Public** (only the first time):
    GitHub → profile → Packages → `ha-addons-silverbullet` → Package settings → Visibility → Public
+
+### Automatic SilverBullet updates
+
+The workflow [`upstream-update.yml`](.github/workflows/upstream-update.yml) checks once a day for a new release of
+[`silverbulletmd/silverbullet`](https://github.com/silverbulletmd/silverbullet/releases) (prereleases are ignored).
+For a new release it raises the pinned image in the `Dockerfile`, the add-on version (`YYYY.M.PATCH`, a new month starts
+at `0`) and the changelog, builds the image and runs [`smoke-test.sh`](.github/scripts/smoke-test.sh). Only if that
+passes, it opens a pull request. Nothing is published until you merge it (squash merge recommended). The merge starts
+the build workflow, which pushes the image to GHCR and creates the release.
+
+- The smoke test covers start, login protection, write/read/delete and a clean stop on amd64. It does **not** cover the
+  MCP bridge, the Runtime API, aarch64 or Home Assistant itself. Read the upstream release notes before merging.
+- A closed pull request is not proposed again for the same version.
+- Start it manually with **Actions → Update SilverBullet → Run workflow** (optionally with a version).
+- Needs the setting *Settings → Actions → General → Allow GitHub Actions to create and approve pull requests*.
+- Optional secret `UPSTREAM_PR_TOKEN` (personal access token with write access to contents and pull requests). Without
+  it the pull request is created with `GITHUB_TOKEN`, and GitHub then does not start the regular checks (lint, smoke
+  test) on it. The smoke test has already run inside the update workflow in that case.
 
 ### Repository settings
 
