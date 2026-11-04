@@ -1,0 +1,67 @@
+---
+# ============================================================================
+# Obsidian LiveSync Server (CouchDB) – Home Assistant add-on configuration
+# Documentation: https://github.com/TigBay/ha-addons/blob/main/obsidian-couchdb/DOCS.md
+# ============================================================================
+
+name: "Obsidian LiveSync Server"
+description: >-
+  CouchDB as a sync backend for the Obsidian Self-hosted LiveSync plugin.
+  Notes stay end-to-end encrypted; the server never sees plain text.
+slug: "obsidian-couchdb"
+version: "0.1.0"
+url: "https://github.com/TigBay/ha-addons/blob/main/obsidian-couchdb/DOCS.md"
+
+# No image key on purpose: the Supervisor builds this add-on locally from the
+# Dockerfile. That keeps it installable by copying the folder to /addons, with
+# no registry and no CI. A published multi-arch image can follow later.
+
+arch:
+  - amd64
+  - aarch64
+
+startup: application
+boot: auto
+init: false
+# CouchDB and the Erlang runtime need longer than the default 10 s to shut down.
+timeout: 30
+
+ports:
+  5984/tcp: 5984
+ports_description:
+  5984/tcp: "CouchDB HTTP API and Fauxton web interface"
+
+# The database lives under /data, so it is part of the add-on backup.
+# /share is not needed: Obsidian only talks to the HTTP API.
+map: []
+
+host_network: false
+
+# AppArmor is off until a profile has been tested on real hardware. CouchDB
+# brings a full Erlang runtime; an untested profile breaks the add-on in ways
+# that are hard to diagnose. See DOCS.md, "Known limitations".
+apparmor: false
+privileged: []
+full_access: false
+
+options:
+  admin_user: "obsidian"
+  admin_password: ""
+  database: "obsidian"
+  cors_origins: "app://obsidian.md,capacitor://localhost,http://localhost"
+  log_level: "warning"
+
+schema:
+  admin_user: str
+  admin_password: password
+  database: match(^[a-z][a-z0-9_$()+/-]*$)
+  cors_origins: str
+  log_level: list(debug|info|notice|warning|error)
+
+webui: "http://[HOST]:[PORT:5984]/_utils/"
+panel_icon: "mdi:database-sync-outline"
+
+# The watchdog cannot send credentials. run.sh therefore sets
+# "require_valid_user_except_for_up = true": /_up answers without
+# authentication, every other path still answers 401. Verified in the PoC.
+watchdog: "http://[HOST]:[PORT:5984]/_up"

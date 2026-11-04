@@ -1,0 +1,52 @@
+---
+configuration:
+  couchdb_url:
+    name: CouchDB-URL
+    description: >-
+      Adresse des LiveSync-Server-Add-ons. Bei einem lokalen Add-on
+      http://local-obsidian-couchdb:5984; aus dem Store trägt der Hostname ein
+      Repository-Präfix. Siehe Dokumentation.
+  couchdb_user:
+    name: CouchDB-Benutzer
+    description: Dasselbe Konto wie admin_user im LiveSync-Server-Add-on.
+  couchdb_password:
+    name: CouchDB-Passwort
+    description: Pflichtangabe. Dasselbe Passwort wie im LiveSync-Server-Add-on.
+  couchdb_database:
+    name: Datenbankname
+    description: Muss mit dem Datenbanknamen in CouchDB und in Obsidian übereinstimmen.
+  passphrase:
+    name: Verschlüsselungs-Passphrase
+    description: >-
+      Die Passphrase der LiveSync-Ende-zu-Ende-Verschlüsselung, zeichengenau. Sie
+      liegt hier im Klartext, dieser Server kann den Vault also entschlüsseln. Nur
+      leer lassen, wenn die Verschlüsselung aus ist.
+  id_derivation_key:
+    name: Wiederherstellungscode
+    description: >-
+      Wiederherstellungscode (sls-id-v1:...) aus den LiveSync-Einstellungen. Nur
+      nötig, wenn die Pfadverschleierung aktiv ist.
+  case_sensitive:
+    name: Groß- und Kleinschreibung beachten
+    description: Muss der entsprechenden LiveSync-Einstellung entsprechen.
+  auth_token:
+    name: MCP-Token
+    description: >-
+      Pflicht-Token für den MCP-Endpunkt. Ohne ihn könnte jeder, der Port 8787
+      erreicht, den ganzen Vault lesen und schreiben. Erzeugen mit
+      openssl rand -hex 32.
+  base_url:
+    name: Öffentliche URL
+    description: >-
+      Öffentliche HTTPS-URL des Endpunkts, nötig für OAuth-Clients wie claude.ai.
+      Für den lokalen Zugriff mit Token kann das Feld leer bleiben.
+  write_folders:
+    name: Beschreibbare Ordner
+    description: >-
+      Durch Komma getrennte Ordner, in die ein Assistent schreiben darf. Leer heißt:
+      der ganze Vault ist beschreibbar. Das Lesen wird nie eingeschränkt.
+  log_level:
+    name: Protokollstufe
+    description: Protokollstufe des MCP-Servers.
+network:
+  8787/tcp: MCP-Endpunkt (/mcp) und OAuth-Discovery

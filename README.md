@@ -20,6 +20,33 @@ Assistant system.*
 
 ---
 
+## Add-ons in this repository
+
+| Add-on | Status | What it does |
+|---|---|---|
+| [**SilverBullet**](silverbullet/DOCS.md) | published, tested on Home Assistant | Markdown note-taking system with a web interface and an MCP bridge |
+| [**Obsidian LiveSync Server**](obsidian-couchdb/DOCS.md) | draft, local Docker only | CouchDB as a sync backend for Obsidian Self-hosted LiveSync |
+| [**Obsidian MCP Server**](obsidian-mcp/DOCS.md) | draft, local Docker only | Reads and writes an end-to-end encrypted Obsidian vault over MCP, with its own OAuth 2.1 provider |
+
+The two Obsidian add-ons are a different answer to the same question as
+SilverBullet: notes on your own hardware, reachable from the phone and from an
+AI assistant, without the laptop having to be on. They are **drafts**: built
+and exercised in local Docker, not yet installed on Home Assistant hardware,
+and without a published image — the Supervisor builds them from the Dockerfile.
+They are not in the store listing yet.
+
+The two approaches differ where it matters:
+
+| | SilverBullet | Obsidian add-ons |
+|---|---|---|
+| Editing on the phone | browser, no app needed | Obsidian app, needs HTTPS |
+| Database views, Kanban | Space Lua queries | native Bases views, including a Kanban board |
+| AI access | MCP bridge, bearer token only | MCP with OAuth 2.1, so claude.ai can connect |
+| Memory footprint | ~345 MB idle, up to 715 MB while indexing | ~206 MB idle, ~214 MB while indexing (two containers) |
+| Moving parts | one add-on | two add-ons plus a plugin, with version coupling |
+
+---
+
 ## Why SilverBullet instead of Notion?
 
 | | SilverBullet | Notion |
