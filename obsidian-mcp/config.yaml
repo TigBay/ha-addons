@@ -1,0 +1,72 @@
+---
+# ============================================================================
+# Obsidian MCP Server – Home Assistant add-on configuration
+# Documentation: https://github.com/TigBay/ha-addons/blob/main/obsidian-mcp/DOCS.md
+# ============================================================================
+
+name: "Obsidian MCP Server"
+description: >-
+  Read and write an end-to-end encrypted Obsidian LiveSync vault from an AI
+  assistant. Speaks MCP over HTTP and brings its own OAuth 2.1 provider.
+slug: "obsidian-mcp"
+version: "0.1.0"
+url: "https://github.com/TigBay/ha-addons/blob/main/obsidian-mcp/DOCS.md"
+
+# No image key on purpose: the Supervisor builds this add-on locally from the
+# Dockerfile. See obsidian-couchdb/config.yaml for the reasoning.
+
+arch:
+  - amd64
+  - aarch64
+
+startup: application
+boot: auto
+init: false
+timeout: 20
+
+ports:
+  8787/tcp: 8787
+ports_description:
+  8787/tcp: "MCP endpoint (/mcp) and OAuth discovery"
+
+# The search index and the OAuth tokens live under /data and are therefore part
+# of the add-on backup. /share is not needed: the notes come from CouchDB.
+map: []
+
+host_network: false
+
+# AppArmor is off until a profile has been tested on real hardware.
+apparmor: false
+privileged: []
+full_access: false
+
+options:
+  couchdb_url: "http://local-obsidian-couchdb:5984"
+  couchdb_user: "obsidian"
+  couchdb_password: ""
+  couchdb_database: "obsidian"
+  passphrase: ""
+  id_derivation_key: ""
+  case_sensitive: false
+  auth_token: ""
+  base_url: ""
+  write_folders: ""
+  log_level: "info"
+
+schema:
+  couchdb_url: url
+  couchdb_user: str
+  couchdb_password: password
+  couchdb_database: match(^[a-z][a-z0-9_$()+/-]*$)
+  passphrase: password?
+  id_derivation_key: password?
+  case_sensitive: bool
+  auth_token: password?
+  base_url: str?
+  write_folders: str?
+  log_level: list(debug|info|warning|error)
+
+panel_icon: "mdi:robot-outline"
+
+# /health answers without a token, unlike /mcp. Verified in the PoC.
+watchdog: "http://[HOST]:[PORT:8787]/health"

@@ -1,0 +1,29 @@
+---
+configuration:
+  admin_user:
+    name: Administrator
+    description: >-
+      Administratorkonto von CouchDB. Denselben Namen in den LiveSync-Einstellungen
+      von Obsidian eintragen.
+  admin_password:
+    name: Administrator-Passwort
+    description: >-
+      Pflichtangabe. Ohne Passwort läuft CouchDB im Admin-Party-Modus, in dem jeder
+      im Netz lesen und schreiben darf. Das Add-on startet ohne Passwort nicht.
+  database:
+    name: Datenbankname
+    description: >-
+      Name der Datenbank mit dem Vault. Muss mit dem Datenbanknamen in den
+      LiveSync-Einstellungen übereinstimmen. Kleinschreibung, keine Leerzeichen.
+  cors_origins:
+    name: Erlaubte Ursprünge (CORS)
+    description: >-
+      Durch Komma getrennte Ursprünge, von denen Obsidian sich verbindet. Die
+      Voreinstellung deckt Desktop, Handy und lokalen Browser ab. Kein Platzhalter.
+  log_level:
+    name: Protokollstufe
+    description: >-
+      Protokollstufe von CouchDB. Für den Alltag warning; debug schreibt sehr viel
+      und füllt das Add-on-Protokoll.
+network:
+  5984/tcp: CouchDB-HTTP-API und Weboberfläche Fauxton

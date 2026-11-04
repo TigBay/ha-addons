@@ -1,0 +1,52 @@
+---
+configuration:
+  couchdb_url:
+    name: CouchDB URL
+    description: >-
+      Address of the LiveSync Server add-on. For a local add-on
+      http://local-obsidian-couchdb:5984; installed from the store the hostname
+      carries a repository prefix. See the documentation.
+  couchdb_user:
+    name: CouchDB user
+    description: Same account as admin_user in the LiveSync Server add-on.
+  couchdb_password:
+    name: CouchDB password
+    description: Required. Same password as in the LiveSync Server add-on.
+  couchdb_database:
+    name: Database name
+    description: Must match the database name in CouchDB and in Obsidian.
+  passphrase:
+    name: Encryption passphrase
+    description: >-
+      The passphrase of the LiveSync end-to-end encryption, character for
+      character. It is stored in clear text here, so this server can decrypt the
+      vault. Leave empty only if encryption is off.
+  id_derivation_key:
+    name: Recovery code
+    description: >-
+      Recovery code (sls-id-v1:...) from the LiveSync settings. Needed only when
+      path obfuscation is enabled.
+  case_sensitive:
+    name: Case-sensitive paths
+    description: Must match the corresponding LiveSync setting.
+  auth_token:
+    name: MCP token
+    description: >-
+      Required bearer token for the MCP endpoint. Without it anyone who can reach
+      port 8787 could read and write the whole vault. Generate one with
+      openssl rand -hex 32.
+  base_url:
+    name: Public URL
+    description: >-
+      Public HTTPS URL of the endpoint, needed for OAuth clients such as
+      claude.ai. Empty is fine for local access with a token.
+  write_folders:
+    name: Writable folders
+    description: >-
+      Comma-separated folders an assistant may write to. Empty means the whole
+      vault is writable. Reading is never restricted.
+  log_level:
+    name: Log level
+    description: Log level of the MCP server.
+network:
+  8787/tcp: MCP endpoint (/mcp) and OAuth discovery
