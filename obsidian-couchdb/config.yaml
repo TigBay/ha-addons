@@ -9,7 +9,7 @@ description: >-
   CouchDB as a sync backend for the Obsidian Self-hosted LiveSync plugin.
   Notes stay end-to-end encrypted; the server never sees plain text.
 slug: "obsidian-couchdb"
-version: "0.1.0"
+version: "0.1.1"
 url: "https://github.com/TigBay/ha-addons/blob/main/obsidian-couchdb/DOCS.md"
 
 # No image key on purpose: the Supervisor builds this add-on locally from the
@@ -49,6 +49,7 @@ options:
   admin_password: ""
   database: "obsidian"
   cors_origins: "app://obsidian.md,capacitor://localhost,http://localhost"
+  cors_headers: ""
   log_level: "warning"
 
 schema:
@@ -56,6 +57,7 @@ schema:
   admin_password: password
   database: match(^[a-z][a-z0-9_$()+/-]*$)
   cors_origins: str
+  cors_headers: str?
   log_level: list(debug|info|notice|warning|error)
 
 webui: "http://[HOST]:[PORT:5984]/_utils/"

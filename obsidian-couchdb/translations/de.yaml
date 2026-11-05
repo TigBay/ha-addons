@@ -20,6 +20,12 @@ configuration:
     description: >-
       Durch Komma getrennte Ursprünge, von denen Obsidian sich verbindet. Die
       Voreinstellung deckt Desktop, Handy und lokalen Browser ab. Kein Platzhalter.
+  cors_headers:
+    name: Zusätzliche Anfrage-Header (CORS)
+    description: >-
+      Optional, durch Komma getrennte Header-Namen, die der Client zusätzlich
+      senden darf, zum Beispiel cf-access-client-id, cf-access-client-secret,
+      wenn ein Proxy ein Token prüft. Leer lassen, wenn keins genutzt wird.
   log_level:
     name: Protokollstufe
     description: >-
