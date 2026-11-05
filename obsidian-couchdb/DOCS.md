@@ -42,6 +42,13 @@ That line is a check, not a formality: the add-on verifies after every start
 that the database really is not reachable without credentials, and stops itself
 if it is.
 
+**Turn the watchdog on.** On the add-on's *Info* page, switch **Watchdog** on.
+It is off after installation, even though this add-on defines a watchdog URL:
+the URL only says what to check, the switch decides whether the Supervisor
+acts on it. Verified on a Dell Wyse: with the switch on, a failing `/_up` made
+the Supervisor log "Watchdog found app … is unhealthy, restarting..." and the
+add-on was back after about 80 seconds.
+
 ### 3. Set up Obsidian
 
 In Obsidian: **Settings → Self-hosted LiveSync → Setup wizard**.
@@ -82,6 +89,24 @@ encryption passphrase, which is not in the backup.
 A backup taken while the add-on is running can catch CouchDB mid-write. For a
 consistent copy, stop the add-on first.
 
+A Home Assistant backup also contains the add-on options, so the administrator
+password is in it in clear text unless the backup itself is password-protected.
+Protect backups that leave the machine.
+
+Restoring a partial backup of just this add-on and the MCP add-on was tested:
+after deleting the database on purpose, the restore brought back every
+document, the encryption salt, the mandatory login and the CORS settings.
+
+### Moving an existing database here
+
+Do not rely on `_replicate` alone. CouchDB replication skips `_local`
+documents, and LiveSync keeps the PBKDF2 salt of the end-to-end encryption in
+`_local/obsidian_livesync_sync_parameters` (next to
+`_local/obsydian_livesync_milestone`). Without the salt every note arrives and
+none can be decrypted, although the document counts match. Copy both documents
+by hand (`GET` on the source, `PUT` on the target without `_rev`), or let
+Obsidian upload the vault fresh with "Initialise or overwrite the remote".
+
 ## Known limitations
 
 - **AppArmor is off.** CouchDB brings a complete Erlang runtime; an untested
@@ -94,7 +119,21 @@ consistent copy, stop the add-on first.
   (`single_node = true`). That is the right shape for a home server and the
   only one LiveSync needs.
 - **Only built locally so far.** The add-on has no published image; the
-  Supervisor builds it from the Dockerfile on installation.
+  Supervisor builds it from the Dockerfile on installation. On a Dell Wyse
+  (Celeron J4105) that took 56 seconds; a rebuild with a warm cache took 17.
+- **File names are not encrypted.** Path obfuscation is off by default, so
+  file names appear in clear text in the database and in backups. Note
+  contents are encrypted.
+- **Extra headers need a CORS entry.** A request header the plugin adds
+  itself (for example a proxy token under "Custom Headers") is rejected by the
+  CORS preflight with `401` unless CouchDB lists it in `[cors] headers`. This
+  add-on does not set that list yet.
+
+## Resource use
+
+Measured on a Dell Wyse (Celeron J4105, 4 GB RAM, other add-ons running), with
+528 notes: about 80–95 MB RAM and about 1 % CPU when idle. The measurement
+script and raw values are in the project's `REPORT.md`.
 
 ## Why some things look the way they do
 
@@ -133,3 +172,4 @@ with a CORS error that does not name the cause.
 | Obsidian reports a CORS error | `cors_origins` does not contain the origin the client uses |
 | Obsidian Mobile will not connect | HTTP is not enough; see "Phone" |
 | `0 notes` in the MCP add-on | The passphrase there does not match the one in Obsidian |
+| MCP add-on says "N documents could not be read" | The encryption salt is missing, typically after a replication that skipped `_local` documents. See "Moving an existing database here" |
