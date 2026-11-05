@@ -13,7 +13,7 @@ version: "0.1.0"
 url: "https://github.com/TigBay/ha-addons/blob/main/obsidian-couchdb/DOCS.md"
 
 # No image key on purpose: the Supervisor builds this add-on locally from the
-# Dockerfile. That keeps it installable by copying the folder to /addons, with
+# Dockerfile. That keeps it installable by copying the folder to /local_apps, with
 # no registry and no CI. A published multi-arch image can follow later.
 
 arch:
