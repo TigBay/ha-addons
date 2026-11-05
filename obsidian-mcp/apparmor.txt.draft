@@ -1,0 +1,74 @@
+#include <tunables/global>
+
+# DRAFT - inactive and not tested.
+#
+# The Supervisor only reads a file named "apparmor.txt", and only when
+# config.yaml does not say "apparmor: false". This file is therefore inert.
+# To try it on a real Home Assistant:
+#   1. cp apparmor.txt.draft apparmor.txt and set "apparmor: true" in config.yaml
+#   2. rebuild the add-on and use it normally for a while: start, stop, a vault
+#      sync, a search, a note write, an OAuth login
+#   3. read the denials on the host (`ha host logs`, lines with
+#      "apparmor=\"ALLOWED\"" and the profile name) and add what is missing
+#   4. only after a clean run remove "complain" below to enforce the profile
+#
+# "complain" logs violations without blocking them, so a gap in this draft
+# cannot break the add-on while it is being developed.
+#
+# What the add-on does (from run.sh): bashio and curl wait for CouchDB, chown
+# /data to uid 1000, then `setpriv --reuid=1000 --regid=1000 --clear-groups`
+# starts `node dist/main.js` from /app. Node talks to CouchDB (HTTP) and
+# accepts HTTP on port 8787.
+#
+# The placeholder ADDON_SLUG is replaced by the Supervisor.
+
+profile ADDON_SLUG flags=(attach_disconnected,mediate_deleted,complain) {
+  #include <abstractions/base>
+
+  # run.sh drops from root to uid 1000 and chowns /data
+  capability setuid,
+  capability setgid,
+  capability chown,
+  capability dac_override,
+  capability dac_read_search,
+  capability fowner,
+  capability setpcap,
+
+  network inet tcp,
+  network inet6 tcp,
+  network inet udp,
+  network inet6 udp,
+
+  # Shell, bashio, curl, jq, setpriv
+  /bin/** ix,
+  /usr/bin/** ix,
+  /usr/lib/bashio/** r,
+  /run.sh rix,
+
+  # Node and the server code
+  /usr/local/bin/node ix,
+  /usr/local/lib/** r,
+  /app/** r,
+
+  # Persistent data: search index, OAuth tokens
+  /data/** rwk,
+  /data/ r,
+
+  # Options written by the Supervisor
+  /data/options.json r,
+
+  # Name resolution, certificates, locale
+  /etc/resolv.conf r,
+  /etc/hosts r,
+  /etc/nsswitch.conf r,
+  /etc/ssl/** r,
+  /etc/ca-certificates/** r,
+  /usr/share/ca-certificates/** r,
+
+  /tmp/** rwk,
+  /dev/null rw,
+  /dev/urandom r,
+  /proc/sys/kernel/random/uuid r,
+  /proc/*/cgroup r,
+  /sys/fs/cgroup/** r,
+}
