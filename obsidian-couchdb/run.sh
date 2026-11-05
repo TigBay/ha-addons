@@ -59,6 +59,7 @@ ADMIN_USER=$(get_config_value 'admin_user' 'obsidian')
 ADMIN_PASSWORD=$(get_config_value 'admin_password')
 DATABASE=$(get_config_value 'database' 'obsidian')
 CORS_ORIGINS=$(get_config_value 'cors_origins' 'app://obsidian.md,capacitor://localhost,http://localhost')
+CORS_HEADERS_EXTRA=$(get_config_value 'cors_headers' '')
 LOG_LEVEL=$(get_config_value 'log_level' 'warning')
 
 if [[ -z "${ADMIN_PASSWORD}" ]]; then
@@ -71,6 +72,21 @@ fi
 
 if [[ ${#ADMIN_PASSWORD} -lt 12 ]]; then
     log_warn "The administrator password is shorter than 12 characters."
+fi
+
+# Extra request headers a client may send (for example a proxy token set under
+# "Custom Headers" in the plugin). CouchDB answers the CORS preflight for any
+# header outside its list with the normal 401, so the headers must be listed.
+# The value goes into an ini file, so only plain header names are accepted.
+CORS_HEADERS_LINE=""
+if [[ -n "${CORS_HEADERS_EXTRA}" ]]; then
+    if [[ ! "${CORS_HEADERS_EXTRA}" =~ ^[A-Za-z0-9-]+(,[[:space:]]*[A-Za-z0-9-]+)*$ ]]; then
+        log_fatal "cors_headers must be a comma-separated list of header names"
+        log_fatal "(letters, digits and hyphens only)."
+        exit 1
+    fi
+    CORS_HEADERS_EXTRA=$(printf '%s' "${CORS_HEADERS_EXTRA,,}" | tr -d '[:space:]' | sed 's/,/, /g')
+    CORS_HEADERS_LINE="headers = accept, authorization, content-type, origin, referer, ${CORS_HEADERS_EXTRA}"
 fi
 
 log_info "Administrator: ${ADMIN_USER}"
@@ -122,6 +138,7 @@ WWW-Authenticate = Basic realm="couchdb"
 credentials = true
 origins = ${CORS_ORIGINS}
 max_age = 3600
+${CORS_HEADERS_LINE}
 
 [log]
 level = ${LOG_LEVEL}

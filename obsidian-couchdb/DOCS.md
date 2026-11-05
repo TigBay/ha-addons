@@ -24,6 +24,7 @@ makes the vault reachable from an AI assistant.
 | `admin_password` | *(empty)* | **Required.** The add-on refuses to start without it |
 | `database` | `obsidian` | Database name; must match the LiveSync setting |
 | `cors_origins` | `app://obsidian.md,capacitor://localhost,http://localhost` | Origins Obsidian connects from. Desktop, mobile, local |
+| `cors_headers` | *(empty)* | Extra request header names the client may send, comma-separated (for example `cf-access-client-id, cf-access-client-secret`). Only needed when a proxy in front checks a token |
 | `log_level` | `warning` | CouchDB log level |
 
 There is no default password on purpose. CouchDB without an administrator runs
@@ -126,8 +127,9 @@ Obsidian upload the vault fresh with "Initialise or overwrite the remote".
   contents are encrypted.
 - **Extra headers need a CORS entry.** A request header the plugin adds
   itself (for example a proxy token under "Custom Headers") is rejected by the
-  CORS preflight with `401` unless CouchDB lists it in `[cors] headers`. This
-  add-on does not set that list yet.
+  CORS preflight with `401` unless CouchDB lists it in `[cors] headers`. Put the
+  names in the `cors_headers` option. Verified by hand: without the entry the
+  preflight answered `401`, with it `204`.
 
 ## Resource use
 

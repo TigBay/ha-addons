@@ -21,6 +21,12 @@ configuration:
     description: >-
       Comma-separated origins Obsidian connects from. The default covers desktop,
       mobile and local browser access. Do not use a wildcard.
+  cors_headers:
+    name: Extra request headers (CORS)
+    description: >-
+      Optional, comma-separated header names the client may send in addition to
+      the usual ones, for example cf-access-client-id, cf-access-client-secret
+      when a proxy checks a token. Leave empty if you do not use one.
   log_level:
     name: Log level
     description: >-

@@ -3,6 +3,21 @@
 All notable changes to this add-on are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.1] - 2026-11-05
+
+### Added
+
+- Option `cors_headers`: extra request header names for the CORS preflight.
+  Without it CouchDB answers a preflight that asks for a header such as
+  `cf-access-client-id` with 401. Names are validated before they reach the
+  configuration file.
+
+### Notes
+
+- Verified on a Dell Wyse (Home Assistant OS 18.4): installs from
+  `/local_apps`, survives stop/start, rebuild, restore from a backup and a host
+  reboot.
+
 ## [0.1.0] - 2026-11-04
 
 First draft, built and tested in local Docker only — not yet on Home Assistant
