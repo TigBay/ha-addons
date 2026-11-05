@@ -3,6 +3,16 @@
 All notable changes to this add-on are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.1.1] - 2026-11-05
+
+### Fixed
+
+- A trailing slash in `base_url` is removed at startup. Before, a value such
+  as `https://api.example.org/` produced doubled slashes in the endpoint log
+  line, in all OAuth endpoints, in the issuer and in the `resource_metadata`
+  link of the `WWW-Authenticate` header. Found on real hardware behind a
+  Cloudflare Tunnel.
+
 ## [0.1.0] - 2026-11-04
 
 First draft, built and tested in local Docker only — not yet on Home Assistant
