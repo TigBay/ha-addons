@@ -9,7 +9,7 @@ description: >-
   Read and write an end-to-end encrypted Obsidian LiveSync vault from an AI
   assistant. Speaks MCP over HTTP and brings its own OAuth 2.1 provider.
 slug: "obsidian-mcp"
-version: "0.1.0"
+version: "0.1.1"
 url: "https://github.com/TigBay/ha-addons/blob/main/obsidian-mcp/DOCS.md"
 
 # No image key on purpose: the Supervisor builds this add-on locally from the

@@ -101,6 +101,12 @@ else
     log_warn "database, not this host."
 fi
 
+# A trailing slash would end up doubled in every OAuth URL ("//oauth/token").
+# Seen on real hardware in phase 10.
+while [[ "${BASE_URL}" == */ ]]; do
+    BASE_URL="${BASE_URL%/}"
+done
+
 if [[ -z "${BASE_URL}" ]]; then
     BASE_URL="http://127.0.0.1:8787"
     log_info "base_url is unset, falling back to ${BASE_URL}."
