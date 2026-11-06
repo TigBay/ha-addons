@@ -33,8 +33,8 @@
 set -euo pipefail
 
 # ─── Helper: read a configuration value ───────────────────────────────────────
-# Same approach as the SilverBullet add-on: bashio first, the file as a
-# fallback, so the script can also be tested locally without a Supervisor.
+# bashio first, the file as a fallback, so the script can also be tested
+# locally without a Supervisor.
 get_config_value() {
     local key="$1" default="${2:-}" value=""
 
