@@ -41,19 +41,13 @@ jobs:
               }
             }' \
             repository.yaml \
-            silverbullet/config.yaml \
-            silverbullet/translations/de.yaml \
-            silverbullet/translations/en.yaml \
             obsidian-couchdb/config.yaml \
             obsidian-couchdb/translations/de.yaml \
             obsidian-couchdb/translations/en.yaml \
             obsidian-mcp/config.yaml \
             obsidian-mcp/translations/de.yaml \
             obsidian-mcp/translations/en.yaml \
-            .github/workflows/lint.yml \
-            .github/workflows/build.yml \
-            .github/workflows/smoke-test.yml \
-            .github/workflows/upstream-update.yml
+            .github/workflows/lint.yml
 
   shellcheck:
     name: Check shell scripts
@@ -75,7 +69,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        addon: [silverbullet, obsidian-couchdb, obsidian-mcp]
+        addon: [obsidian-couchdb, obsidian-mcp]
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -112,7 +106,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        addon: [silverbullet, obsidian-couchdb, obsidian-mcp]
+        addon: [obsidian-couchdb, obsidian-mcp]
     steps:
       - name: Check out repository
         uses: actions/checkout@v4

@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a problem with the SilverBullet add-on
+description: Report a problem with one of the add-ons
 title: "[Bug]: "
 labels: ["bug", "triage"]
 body:
@@ -8,12 +8,22 @@ body:
       value: |
         Thanks for reporting a problem! Please fill in all relevant fields.
 
+  - type: dropdown
+    id: addon
+    attributes:
+      label: Add-on
+      options:
+        - Obsidian LiveSync Server
+        - Obsidian MCP Server
+    validations:
+      required: true
+
   - type: input
     id: addon-version
     attributes:
       label: Add-on version
       description: Which version of the add-on do you use?
-      placeholder: "e.g. 2026.10.0"
+      placeholder: "e.g. 0.2.0"
     validations:
       required: true
 
@@ -58,7 +68,7 @@ body:
     id: logs
     attributes:
       label: Add-on logs
-      description: "Copy the logs from: Settings → Add-ons → SilverBullet → Log. Remove passwords and tokens first."
+      description: "Copy the logs from: Settings → Add-ons → (the add-on) → Log. Remove passwords and tokens first."
       render: shell
 
   - type: checkboxes

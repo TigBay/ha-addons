@@ -34,4 +34,3 @@ venv/
 !.env.example
 *zugang*.txt
 *credentials*.txt
-sb-addon-test/

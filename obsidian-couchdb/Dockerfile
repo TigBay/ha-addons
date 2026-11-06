@@ -1,8 +1,8 @@
 # =============================================================================
 # Obsidian LiveSync Server (CouchDB) – Home Assistant add-on
 #
-# Unlike the SilverBullet add-on there is no binary to copy into an Alpine base
-# image: CouchDB ships a complete Erlang/OTP runtime. The official CouchDB
+# There is no single binary to copy into an Alpine base image: CouchDB ships a
+# complete Erlang/OTP runtime. The official CouchDB
 # image is therefore the base, and the Home Assistant conventions (bashio,
 # run.sh, labels) are layered on top.
 #
