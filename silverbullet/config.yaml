@@ -54,8 +54,10 @@ full_access: false
 # For separate backups of the space, read the documentation.
 
 # Default options (written to /data/options.json)
+# sb_user has no default on purpose: the add-on refuses to start until the
+# operator sets "username:password" (see run.sh).
 options:
-  sb_user: "admin:changeme"
+  sb_user: ""
   space_path: "/share/silverbullet/space"
   enable_mcp: false
   mcp_token: ""

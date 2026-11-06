@@ -74,13 +74,13 @@ For plain SilverBullet without Home Assistant, the [official image](https://silv
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `sb_user` | `str` | `admin:changeme` | Username and password (format: `user:password`) |
+| `sb_user` | `str` | *(empty)* | **Required.** Username and password (format: `user:password`). The add-on refuses to start until it is set |
 | `space_path` | `str` | `/share/silverbullet/space` | Path to the Markdown space |
 | `enable_mcp` | `bool` | `false` | Enable the MCP bridge (port 3033, must also be mapped under **Network**) |
 | `mcp_token` | `password?` | *(empty)* | Bearer token for MCP (empty = generated automatically, see below) |
 | `additional_args` | `str?` | *(empty)* | Additional SilverBullet start arguments |
 
-> **Important:** Change the default password `changeme` right after the installation!
+> **Important:** There is no default password on purpose. Set `sb_user` before the first start; the password `changeme` is rejected.
 
 ## Data path and backup
 
@@ -230,7 +230,7 @@ returned the expected rows, and the test pages were deleted afterwards.
 ### Implemented measures
 
 - `sb_user` is mandatory — a start without a password is rejected
-- The default password `changeme` triggers a warning in the log
+- No default credentials are shipped; the publicly known password `changeme` is rejected
 - The MCP token is not written to the logs
 - Automatically generated tokens are stored under `/data/mcp_token.txt` with permission `600`
 - The AppArmor profile restricts container access
@@ -240,7 +240,7 @@ returned the expected rows, and the test pages were deleted afterwards.
 
 ### Security recommendations
 
-- Change the default password immediately
+- Choose a strong password for `sb_user`
 - Use a strong MCP token (at least 32 characters)
 - Do not expose port 3000 to the internet
 - Use Tailscale or a VPN for external access

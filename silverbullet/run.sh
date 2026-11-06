@@ -54,8 +54,16 @@ MCP_TOKEN_CONFIG=$(get_config_value 'mcp_token' '')
 
 # ─── Security checks ──────────────────────────────────────────────────────────
 
+# SB_USER has no shipped default: the operator must choose the credentials
+if [[ -z "${SB_USER:-}" ]]; then
+    bashio::log.fatal "sb_user is not set. No default credentials are shipped."
+    bashio::log.fatal "Set it in the add-on configuration, then start the add-on again."
+    bashio::log.fatal "Example: admin:my-secure-password"
+    exit 1
+fi
+
 # SB_USER must have the format "username:password"
-if [[ -z "${SB_USER:-}" ]] || [[ "${SB_USER}" != *":"* ]]; then
+if [[ "${SB_USER}" != *":"* ]]; then
     bashio::log.fatal "sb_user must have the format 'username:password'."
     bashio::log.fatal "Example: admin:my-secure-password"
     exit 1
@@ -81,9 +89,11 @@ if [[ -z "${SPACE_PATH:-}" ]]; then
     exit 1
 fi
 
+# 'changeme' was the default password of earlier versions and is publicly known
 if [[ "${PASS_PART}" == "changeme" ]]; then
-    bashio::log.warning "Security warning: you are using the default password 'changeme'."
-    bashio::log.warning "Change it in the add-on configuration (option sb_user)."
+    bashio::log.fatal "The password 'changeme' is publicly known and is not accepted."
+    bashio::log.fatal "Change it in the add-on configuration (option sb_user)."
+    exit 1
 fi
 
 bashio::log.info "Username: ${USER_PART}"

@@ -3,8 +3,9 @@ configuration:
   sb_user:
     name: Benutzer und Passwort
     description: >-
-      Zugangsdaten im Format benutzername:passwort. SilverBullet startet nie ohne
-      Authentifizierung. Das Standard-Passwort changeme sofort ändern.
+      Zugangsdaten im Format benutzername:passwort. Pflichtangabe: es gibt keinen
+      Standardwert und SilverBullet startet nie ohne Authentifizierung. Das Passwort
+      changeme wird abgelehnt.
   space_path:
     name: Space-Pfad
     description: >-

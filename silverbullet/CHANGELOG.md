@@ -3,6 +3,13 @@
 All notable changes to this add-on are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Security
+- `sb_user` no longer has a default value. The add-on refuses to start until credentials are set, and the
+  publicly known password `changeme` (the former default) is rejected instead of only logged as a warning.
+  Installations that still use `admin:changeme` must set a new password before the add-on starts again.
+
 ## [2026.10.0] – 2026-11-01
 
 ### Added

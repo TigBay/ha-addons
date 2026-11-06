@@ -3,8 +3,8 @@ configuration:
   sb_user:
     name: User and password
     description: >-
-      Credentials in the format username:password. SilverBullet never starts without
-      authentication. Change the default password changeme right away.
+      Credentials in the format username:password. Required: there is no default and
+      SilverBullet never starts without authentication. The password changeme is rejected.
   space_path:
     name: Space path
     description: >-

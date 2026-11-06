@@ -12,13 +12,13 @@ Open the add-on configuration and adjust the following values:
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `sb_user` | `admin:changeme` | Username and password in the format `user:password` |
+| `sb_user` | *(empty)* | **Required.** Username and password in the format `user:password`. The add-on refuses to start without it |
 | `space_path` | `/share/silverbullet/space` | Path to your Markdown files |
 | `enable_mcp` | `false` | Enable the MCP bridge for AI access |
 | `mcp_token` | *(empty)* | Bearer token for MCP. Empty = generated automatically |
 | `additional_args` | *(empty)* | Optional additional SilverBullet arguments |
 
-> **Important:** Change the default password `changeme` right after the installation.
+> **Important:** There is no default password on purpose. Set `sb_user` before the first start; the password `changeme` is rejected.
 
 ### 2. Start the add-on
 
