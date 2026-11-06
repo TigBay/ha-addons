@@ -3,6 +3,39 @@
 All notable changes to this add-on are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.0] - 2026-11-06
+
+### Security
+
+- Plain HTTP is no longer offered to the network. The server speaks only
+  plain HTTP, so on the published port 8787 the bearer token and the decrypted
+  notes crossed the LAN in clear text. Port 8787 is no longer published by
+  default, and the add-on now refuses to start if 8787 has a host port — also
+  one kept from an earlier version, and whatever `base_url` says. The check
+  asks the Supervisor at every start and fails closed if it cannot.
+
+### Added
+
+- Options `ssl`, `certfile` and `keyfile`: an HTTPS listener on port 8443,
+  served by `tls-proxy.mjs`, a small TLS terminator built on Node's standard
+  library that forwards each request unchanged to the server and streams the
+  answers (server-sent events included). The key is copied into the container
+  with mode 0600, outside `/data`, so it is not part of the add-on backup.
+- `hassio_api: true` for the port check, and a read-only `/ssl` mount.
+
+### Changed
+
+- **Breaking:** clients can no longer connect to `http://<ha-ip>:8787/mcp`.
+  Turn on `ssl` and publish 8443, or reach the add-on through a tunnel or
+  proxy add-on on the internal network. An installation that kept a host port
+  for 8787 stops with a message naming the port until it is cleared under
+  *Network*.
+
+### Notes
+
+- HTTPS and the port check were tested in local Docker and against a simulated
+  Supervisor, not yet on Home Assistant hardware.
+
 ## [0.1.1] - 2026-11-05
 
 ### Fixed

@@ -44,7 +44,8 @@ RUN curl -fsSL "https://github.com/hassio-addons/bashio/archive/refs/tags/v${BAS
     && rm -rf /tmp/bashio /tmp/bashio.tar.gz
 
 COPY run.sh /run.sh
-RUN chmod a+x /run.sh
+COPY tls-proxy.mjs /tls-proxy.mjs
+RUN chmod a+x /run.sh && chmod a+r /tls-proxy.mjs
 
 # /health answers without a token; /mcp would answer 400 or 401.
 HEALTHCHECK \

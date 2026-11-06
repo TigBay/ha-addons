@@ -32,7 +32,7 @@ configuration:
   auth_token:
     name: MCP-Token
     description: >-
-      Pflicht-Token für den MCP-Endpunkt. Ohne ihn könnte jeder, der Port 8787
+      Pflicht-Token für den MCP-Endpunkt. Ohne ihn könnte jeder, der den Endpunkt
       erreicht, den ganzen Vault lesen und schreiben. Erzeugen mit
       openssl rand -hex 32.
   base_url:
@@ -45,8 +45,22 @@ configuration:
     description: >-
       Durch Komma getrennte Ordner, in die ein Assistent schreiben darf. Leer heißt:
       der ganze Vault ist beschreibbar. Das Lesen wird nie eingeschränkt.
+  ssl:
+    name: HTTPS
+    description: >-
+      Den Endpunkt per HTTPS auf Port 8443 mit dem Zertifikat aus /ssl anbieten.
+      Unverschlüsseltes HTTP wird nie ins Netz angeboten.
+  certfile:
+    name: Zertifikatsdatei
+    description: Zertifikat (PEM, vollständige Kette), relativ zu /ssl.
+  keyfile:
+    name: Schlüsseldatei
+    description: Privater Schlüssel (PEM), relativ zu /ssl.
   log_level:
     name: Protokollstufe
     description: Protokollstufe des MCP-Servers.
 network:
-  8787/tcp: MCP-Endpunkt (/mcp) und OAuth-Discovery
+  8787/tcp: >-
+    Unverschlüsseltes HTTP nur für Tunnel- und Proxy-Add-ons. Leer lassen: Ist
+    dieser Port veröffentlicht, startet das Add-on nicht.
+  8443/tcp: HTTPS-MCP-Endpunkt (/mcp) und OAuth-Discovery (braucht die Option HTTPS)

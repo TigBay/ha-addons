@@ -33,7 +33,7 @@ configuration:
     name: MCP token
     description: >-
       Required bearer token for the MCP endpoint. Without it anyone who can reach
-      port 8787 could read and write the whole vault. Generate one with
+      the endpoint could read and write the whole vault. Generate one with
       openssl rand -hex 32.
   base_url:
     name: Public URL
@@ -45,8 +45,22 @@ configuration:
     description: >-
       Comma-separated folders an assistant may write to. Empty means the whole
       vault is writable. Reading is never restricted.
+  ssl:
+    name: HTTPS
+    description: >-
+      Serve the endpoint over HTTPS on port 8443 with the certificate from /ssl.
+      Plain HTTP is never offered to the network.
+  certfile:
+    name: Certificate file
+    description: Certificate (PEM, full chain), relative to /ssl.
+  keyfile:
+    name: Key file
+    description: Private key (PEM), relative to /ssl.
   log_level:
     name: Log level
     description: Log level of the MCP server.
 network:
-  8787/tcp: MCP endpoint (/mcp) and OAuth discovery
+  8787/tcp: >-
+    Plain HTTP for tunnel and proxy add-ons only. Leave empty: the add-on
+    refuses to start if this port is published.
+  8443/tcp: HTTPS MCP endpoint (/mcp) and OAuth discovery (needs the HTTPS option)

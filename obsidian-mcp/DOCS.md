@@ -51,11 +51,14 @@ Two limits are worth knowing before you plan around this add-on:
 | `auth_token` | *(empty)* | **Required.** Bearer token for the MCP endpoint |
 | `base_url` | *(empty)* | Public HTTPS URL, needed for OAuth clients |
 | `write_folders` | *(empty)* | Limits write access. Empty = the whole vault |
+| `ssl` | `false` | Serve the endpoint over HTTPS on port 8443 |
+| `certfile` | `fullchain.pem` | Certificate (PEM, full chain) under `/ssl` |
+| `keyfile` | `privkey.pem` | Private key (PEM) under `/ssl` |
 | `log_level` | `info` | |
 
 Generate the token with something like `openssl rand -hex 32`. The add-on
-refuses to start without one: port 8787 would otherwise give anyone on the
-network read and write access to the whole vault.
+refuses to start without one: the endpoint would otherwise give anyone who
+reaches it read and write access to the whole vault.
 
 ### 2. Reaching the other add-on
 
@@ -69,8 +72,9 @@ add-on was installed:
 | Any other CouchDB | its own URL |
 
 If the name is wrong, the add-on stops after 120 seconds with a message naming
-exactly this. Alternatively use the Home Assistant host address and the
-published port, which works in every case.
+exactly this. The LiveSync Server add-on no longer publishes plain HTTP on the
+host, so the host address with port 5984 is not a fallback any more; find the
+hostname instead (the Supervisor shows it on the add-on's *Info* page).
 
 ### 3. The passphrase
 
@@ -89,9 +93,27 @@ names the cause.
 
 ### 4. Connecting a client
 
-**Locally, with a token** — in `claude_desktop_config.json` or
-`.mcp.json`, as an HTTP MCP server at `http://<your-ha-ip>:8787/mcp` with the
-header `Authorization: Bearer <auth_token>`.
+The server itself speaks plain HTTP on port 8787, and every request carries
+the bearer token; every answer carries decrypted notes. Port 8787 is therefore
+never published on the host: it is only for tunnel and proxy add-ons on the
+internal network. The add-on asks the Supervisor at every start whether 8787
+has a host port under *Network*, and does not start if it has — or if the
+Supervisor cannot be asked.
+
+**In your network, with a token** — over HTTPS on port 8443:
+
+1. Put a certificate and its key into `/ssl`, for example with the Let's
+   Encrypt or DuckDNS add-on. It must be valid for the host name your
+   clients use.
+2. Set `ssl: true` (and `certfile`/`keyfile` if your files have other names).
+3. Under *Network*, enter a host port for **8443/tcp**. Leave 8787/tcp empty.
+4. In `claude_desktop_config.json` or `.mcp.json`, add an HTTP MCP server at
+   `https://<host-name-in-the-certificate>:8443/mcp` with the header
+   `Authorization: Bearer <auth_token>`.
+
+The HTTPS listener is a small TLS terminator in the add-on
+(`tls-proxy.mjs`, Node built-ins only) that forwards each request unchanged to
+the server on 8787 inside the container.
 
 **From claude.ai, over OAuth** — the server brings its own OAuth 2.1 provider
 with discovery, dynamic client registration and PKCE, which is what
@@ -99,7 +121,10 @@ claude.ai expects from a remote MCP server. It needs two things:
 
 1. `base_url` set to the **public HTTPS** URL of the endpoint.
 2. That URL actually reachable from the internet — through a Cloudflare Tunnel,
-   a reverse proxy with a certificate, or Tailscale Funnel.
+   a reverse proxy with a certificate, or Tailscale Funnel. Point the tunnel or
+   proxy add-on at this add-on's internal hostname and port 8787 (for a local
+   add-on `http://local-obsidian-mcp:8787`; not yet verified), or at 8443 over
+   HTTPS if it runs outside Home Assistant.
 
 The Home Assistant Tailscale add-on is **not** enough on its own: its
 `services` option only does Serve (inside the tailnet), not Funnel.
@@ -158,12 +183,26 @@ CouchDB.
   both revisions stay readable — but resolve conflicts in Obsidian promptly.
   Edits on different lines are merged automatically.
 - **Only built locally so far**, like the CouchDB add-on.
+- **HTTPS and the port check are not yet verified on Home Assistant
+  hardware.** Tested in local Docker: an MCP `initialize` over HTTPS on 8443
+  succeeded with the token and answered 401 without it, server-sent events
+  streamed through, and the port check refused a published 8787 against a
+  simulated Supervisor. Not yet checked on a real Supervisor: the watchdog
+  with 8787 unpublished (expected to work, because the Supervisor probes the
+  container port).
+- **Plain HTTP stays inside the host.** Tunnel and proxy add-ons reach 8787
+  over the internal Docker network in clear text. Reading that traffic needs a
+  compromised add-on on the same machine, not just a seat on the LAN.
 
 ## Troubleshooting
 
 | Symptom | Cause |
 |---|---|
 | Stops with "auth_token is empty" | Set a token |
+| Stops with "8787/tcp is published on host port …" | Clear the 8787/tcp field under *Network*; connect over 8443 or a tunnel. Typical after updating from 0.1.x |
+| Stops with "Could not ask the Supervisor" | The Supervisor API did not answer. Restart the add-on; if it persists, check the Supervisor log |
+| Stops with "/ssl/… does not exist" or "The HTTPS listener on 8443 …" | `ssl` is on but the certificate or key is missing, or they do not match |
+| A local client stopped connecting after the update | 0.2.0 no longer serves `http://<ha-ip>:8787`. Use HTTPS on 8443; see "Connecting a client" |
 | Stops with "CouchDB … did not answer" | `couchdb_url`, credentials or database name wrong, or the CouchDB add-on is not running |
 | `0 notes`, `ChangeManager Error watching changes` | The passphrase does not match, or was empty at startup. The same message appears briefly while CouchDB restarts and then clears |
 | "N documents could not be read" at the top of a search answer | The encryption salt is missing in CouchDB, for example after a replication that skipped `_local` documents. See the CouchDB add-on documentation |
