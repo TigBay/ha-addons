@@ -9,7 +9,7 @@ description: >-
   CouchDB as a sync backend for the Obsidian Self-hosted LiveSync plugin.
   Notes stay end-to-end encrypted; the server never sees plain text.
 slug: "obsidian-couchdb"
-version: "0.1.1"
+version: "0.2.0"
 url: "https://github.com/TigBay/ha-addons/blob/main/obsidian-couchdb/DOCS.md"
 
 # No image key on purpose: the Supervisor builds this add-on locally from the
@@ -26,16 +26,28 @@ init: false
 # CouchDB and the Erlang runtime need longer than the default 10 s to shut down.
 timeout: 30
 
+# Plain HTTP on 5984 carries the administrator password in an HTTP Basic
+# header. It is for other add-ons on the internal network only and is never
+# published on the host: run.sh refuses to start if it is. Devices on the LAN
+# connect over HTTPS on 6984 (option ssl).
 ports:
-  5984/tcp: 5984
+  5984/tcp: null
+  6984/tcp: null
 ports_description:
-  5984/tcp: "CouchDB HTTP API and Fauxton web interface"
+  5984/tcp: "Plain HTTP, internal only. Leave empty: the add-on refuses to start if it is published"
+  6984/tcp: "HTTPS for Obsidian and Fauxton (needs the ssl option)"
 
 # The database lives under /data, so it is part of the add-on backup.
-# /share is not needed: Obsidian only talks to the HTTP API.
-map: []
+# /ssl holds the certificate for the HTTPS listener. /share is not needed.
+map:
+  - type: ssl
+    read_only: true
 
 host_network: false
+
+# Read access to the Supervisor API, so run.sh can check whether 5984 is
+# published on the host (GET /addons/self/info).
+hassio_api: true
 
 # AppArmor is off until a profile has been tested on real hardware. CouchDB
 # brings a full Erlang runtime; an untested profile breaks the add-on in ways
@@ -50,6 +62,9 @@ options:
   database: "obsidian"
   cors_origins: "app://obsidian.md,capacitor://localhost,http://localhost"
   cors_headers: ""
+  ssl: false
+  certfile: "fullchain.pem"
+  keyfile: "privkey.pem"
   log_level: "warning"
 
 schema:
@@ -58,12 +73,19 @@ schema:
   database: match(^[a-z][a-z0-9_$()+/-]*$)
   cors_origins: str
   cors_headers: str?
+  ssl: bool
+  certfile: str
+  keyfile: str
   log_level: list(debug|info|notice|warning|error)
 
-webui: "http://[HOST]:[PORT:5984]/_utils/"
+# Shown only when 6984 is published.
+webui: "https://[HOST]:[PORT:6984]/_utils/"
 panel_icon: "mdi:database-sync-outline"
 
 # The watchdog cannot send credentials. run.sh therefore sets
 # "require_valid_user_except_for_up = true": /_up answers without
 # authentication, every other path still answers 401. Verified in the PoC.
+# Without host_network the Supervisor should probe the container address and
+# the container port, so the unpublished 5984 should still work here. Not yet
+# verified on hardware.
 watchdog: "http://[HOST]:[PORT:5984]/_up"

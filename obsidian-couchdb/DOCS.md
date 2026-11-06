@@ -25,10 +25,42 @@ makes the vault reachable from an AI assistant.
 | `database` | `obsidian` | Database name; must match the LiveSync setting |
 | `cors_origins` | `app://obsidian.md,capacitor://localhost,http://localhost` | Origins Obsidian connects from. Desktop, mobile, local |
 | `cors_headers` | *(empty)* | Extra request header names the client may send, comma-separated (for example `cf-access-client-id, cf-access-client-secret`). Only needed when a proxy in front checks a token |
+| `ssl` | `false` | Serve HTTPS on port 6984. Needed for Obsidian to connect directly |
+| `certfile` | `fullchain.pem` | Certificate (PEM, full chain) under `/ssl` |
+| `keyfile` | `privkey.pem` | Private key (PEM) under `/ssl` |
 | `log_level` | `warning` | CouchDB log level |
 
 There is no default password on purpose. CouchDB without an administrator runs
 in *admin party* mode, where everyone on the network may read and write.
+
+### Network access and encryption
+
+CouchDB authenticates with HTTP Basic: every request carries the administrator
+password, only Base64-encoded. Over plain HTTP anyone who can watch the network
+reads it. The add-on therefore never offers plain HTTP outside the host:
+
+| Port | Protocol | Who uses it |
+|---|---|---|
+| 5984 | plain HTTP | Other add-ons only, over the internal network (`http://local-obsidian-couchdb:5984`). **Never published.** The add-on refuses to start if 5984 has a host port under *Network* |
+| 6984 | HTTPS | Obsidian and Fauxton. Off unless `ssl` is on and 6984 has a host port |
+
+To connect Obsidian directly:
+
+1. Put a certificate and its key into `/ssl`, for example with the Let's
+   Encrypt or DuckDNS add-on. The certificate must be valid for the host name
+   your devices use — Obsidian, and the phone app in particular, reject
+   self-signed certificates.
+2. Make that host name resolve to the Home Assistant machine in your network.
+3. Set `ssl: true` (and `certfile`/`keyfile` if your files have other names).
+4. Under *Network*, enter a host port for **6984/tcp**. Leave 5984/tcp empty.
+
+The alternative is a TLS proxy or tunnel add-on (NGINX Proxy Manager,
+Cloudflare Tunnel, Tailscale) that reaches `http://local-obsidian-couchdb:5984`
+over the internal network and offers HTTPS to the outside. Then `ssl` can stay
+off and no port of this add-on is published.
+
+The add-on asks the Supervisor at every start whether 5984 is published, and
+does not start if the answer is yes — or if the Supervisor cannot be asked.
 
 ### 2. Start the add-on
 
@@ -56,7 +88,7 @@ In Obsidian: **Settings → Self-hosted LiveSync → Setup wizard**.
 
 | Field | Value |
 |---|---|
-| URI | `http://<your-ha-ip>:5984` |
+| URI | `https://<host-name-in-the-certificate>:<host-port-of-6984>`, or the HTTPS URL of your proxy |
 | Username | your `admin_user` |
 | Password | your `admin_password` |
 | Database name | your `database` |
@@ -71,15 +103,16 @@ overwrites the server.
 
 ### 4. Phone
 
-Obsidian Mobile connects **only over HTTPS**; the app says so in the setup
-dialog. Port 5984 over plain HTTP works on the desktop but not on the phone.
-Your options:
+Obsidian Mobile connects **only over HTTPS**, with a certificate it trusts. In
+your home network the `ssl` setup above works for the phone too. Away from
+home:
 
 - **Tailscale** — the Home Assistant Tailscale add-on can advertise other local
   services inside your tailnet (`services` option, Serve mode). Good for your
   own devices.
 - **Cloudflare Tunnel** or a reverse proxy with a Let's Encrypt certificate —
-  needed if the endpoint has to be reachable without a VPN client.
+  needed if the endpoint has to be reachable without a VPN client. Point it at
+  `http://local-obsidian-couchdb:5984`, not at a published port.
 
 ## Backup
 
@@ -130,6 +163,17 @@ Obsidian upload the vault fresh with "Initialise or overwrite the remote".
   CORS preflight with `401` unless CouchDB lists it in `[cors] headers`. Put the
   names in the `cors_headers` option. Verified by hand: without the entry the
   preflight answered `401`, with it `204`.
+- **The HTTPS listener and the port check are not yet verified on Home
+  Assistant hardware.** Both were tested in local Docker: HTTPS on 6984
+  answered `/_up` with 200 and the database with 401 without credentials and
+  200 with them; the port check refused a published 5984 against a simulated
+  Supervisor. Not yet checked on a real Supervisor: the watchdog with 5984
+  unpublished (expected to work, because the Supervisor probes the container
+  port) and the *Open Web UI* button, which only appears when 6984 is
+  published.
+- **Plain HTTP stays inside the host.** Other add-ons still talk to 5984 over
+  the internal Docker network in clear text. Reading that traffic needs a
+  compromised add-on on the same machine, not just a seat on the LAN.
 
 ## Resource use
 
@@ -171,7 +215,12 @@ with a CORS error that does not name the cause.
 |---|---|
 | Add-on stops with "admin_password is empty" | Set a password in the configuration |
 | Add-on stops with "The database is reachable without credentials" | The configuration did not take effect. Check the log above that line |
+| Add-on stops with "5984/tcp is published on host port …" | Clear the 5984/tcp field under *Network*; connect over 6984 instead. Typical after updating from 0.1.x |
+| Add-on stops with "Could not ask the Supervisor" | The Supervisor API did not answer. Restart the add-on; if it persists, check the Supervisor log |
+| Add-on stops with "/ssl/… does not exist" | `ssl` is on but the certificate or key is missing under `/ssl` |
+| Add-on stops with "The HTTPS listener on 6984 did not come up" | Certificate and key do not match, or are not PEM |
+| Obsidian cannot connect after the update | 0.2.0 no longer serves plain HTTP to the LAN. See "Network access and encryption" |
 | Obsidian reports a CORS error | `cors_origins` does not contain the origin the client uses |
-| Obsidian Mobile will not connect | HTTP is not enough; see "Phone" |
+| Obsidian Mobile will not connect | The certificate is self-signed or not valid for the host name used; see "Network access and encryption" |
 | `0 notes` in the MCP add-on | The passphrase there does not match the one in Obsidian |
 | MCP add-on says "N documents could not be read" | The encryption salt is missing, typically after a replication that skipped `_local` documents. See "Moving an existing database here" |
