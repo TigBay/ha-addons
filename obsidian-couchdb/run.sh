@@ -5,11 +5,14 @@
 #
 # Flow:
 #   1. Read the configuration from /data/options.json
-#   2. Create the data directories and hand them to uid 5984
-#   3. Write the local.d configuration on EVERY start
-#   4. Start CouchDB as the couchdb user
-#   5. Wait for /_up, create the database, verify that auth is enforced
-#   6. Supervise the process, stop cleanly on SIGTERM
+#   2. Refuse to start if plain HTTP (5984) is published on the host
+#   3. Create the data directories and hand them to uid 5984
+#   4. Copy the TLS certificate (option ssl) and write the local.d
+#      configuration on EVERY start
+#   5. Start CouchDB as the couchdb user
+#   6. Wait for /_up (and the HTTPS listener), create the database, verify
+#      that auth is enforced
+#   7. Supervise the process, stop cleanly on SIGTERM
 #
 # Four pitfalls of the CouchDB image, all of them hit during the proof of
 # concept:
@@ -52,6 +55,58 @@ log_info()  { bashio::log.info "$@" 2>/dev/null || echo "[INFO]  $*"; }
 log_warn()  { bashio::log.warning "$@" 2>/dev/null || echo "[WARN]  $*"; }
 log_fatal() { bashio::log.fatal "$@" 2>/dev/null || echo "[FATAL] $*" >&2; }
 
+# ─── Helper: refuse a published plain-HTTP port ───────────────────────────────
+# Asks the Supervisor which host port, if any, the given container port is
+# published on, and stops the add-on if it is published at all. Fails closed:
+# if the Supervisor cannot be asked, the add-on does not start either. Outside
+# a Supervisor (no SUPERVISOR_TOKEN, e.g. a local docker run) it only warns.
+require_unpublished_port() {
+    local port_key="$1" info="" attempt published
+
+    if [[ -z "${SUPERVISOR_TOKEN:-}" ]]; then
+        log_warn "No Supervisor connection: cannot check whether ${port_key}"
+        log_warn "is published. Never publish it on the host."
+        return 0
+    fi
+
+    for attempt in 1 2 3; do
+        if info=$(curl -sf --max-time 5 \
+                -H "Authorization: Bearer ${SUPERVISOR_TOKEN}" \
+                http://supervisor/addons/self/info); then
+            break
+        fi
+        info=""
+        if [[ ${attempt} -lt 3 ]]; then
+            sleep 2
+        fi
+    done
+
+    if [[ -z "${info}" ]] || [[ "$(jq -r '.result // empty' <<< "${info}" 2>/dev/null)" != "ok" ]]; then
+        log_fatal "Could not ask the Supervisor whether ${port_key} is published."
+        log_fatal "Not starting rather than risking plain HTTP on the network."
+        exit 1
+    fi
+
+    published=$(jq -r --arg k "${port_key}" '.data.network[$k] // empty' <<< "${info}" 2>/dev/null) \
+        || published="unknown"
+    if [[ -n "${published}" ]]; then
+        log_fatal "${port_key} is published on host port ${published}."
+        log_fatal "That port speaks plain HTTP, so every login would cross the"
+        log_fatal "network in clear text. Clear it under Settings -> Add-ons ->"
+        log_fatal "this add-on -> Network, and connect over HTTPS instead"
+        log_fatal "(option ssl, port 6984). See the documentation."
+        exit 1
+    fi
+}
+
+# ─── Helper: validate a file name under /ssl ──────────────────────────────────
+# Relative names only, no ".." segment, nothing that could start an option.
+valid_ssl_name() {
+    local name="$1"
+    [[ "${name}" =~ ^[A-Za-z0-9_][A-Za-z0-9._-]*(/[A-Za-z0-9_][A-Za-z0-9._-]*)*$ ]] || return 1
+    [[ "/${name}/" != */../* ]] || return 1
+}
+
 # ─── Read the configuration ───────────────────────────────────────────────────
 log_info "Starting the Obsidian LiveSync Server add-on..."
 
@@ -60,7 +115,13 @@ ADMIN_PASSWORD=$(get_config_value 'admin_password')
 DATABASE=$(get_config_value 'database' 'obsidian')
 CORS_ORIGINS=$(get_config_value 'cors_origins' 'app://obsidian.md,capacitor://localhost,http://localhost')
 CORS_HEADERS_EXTRA=$(get_config_value 'cors_headers' '')
+SSL=$(get_config_value 'ssl' 'false')
+CERTFILE=$(get_config_value 'certfile' 'fullchain.pem')
+KEYFILE=$(get_config_value 'keyfile' 'privkey.pem')
 LOG_LEVEL=$(get_config_value 'log_level' 'warning')
+
+# Plain HTTP must never reach the LAN. Checked before anything else starts.
+require_unpublished_port "5984/tcp"
 
 if [[ -z "${ADMIN_PASSWORD}" ]]; then
     log_fatal "admin_password is empty."
@@ -102,6 +163,38 @@ CONFIG_FILE=/opt/couchdb/etc/local.d/10-addon.ini
 mkdir -p "${DATA_DIR}" "${VIEW_DIR}"
 chown -R 5984:5984 "${DATA_DIR}" "${VIEW_DIR}"
 
+# ─── TLS certificate ──────────────────────────────────────────────────────────
+# CouchDB runs as uid 5984 and has to read the key, but /ssl is shared with
+# other add-ons. Only the two named files are copied into the container (not
+# under /data, so the key is not part of the add-on backup), and the copy is
+# rebuilt on every start, also removed when ssl is off.
+TLS_DIR=/opt/couchdb/etc/tls
+rm -rf "${TLS_DIR}"
+SSL_BLOCK=""
+if [[ "${SSL}" == "true" ]]; then
+    for name in "${CERTFILE}" "${KEYFILE}"; do
+        if ! valid_ssl_name "${name}"; then
+            log_fatal "certfile and keyfile must be file names relative to /ssl,"
+            log_fatal "without '..' (got: '${name}')."
+            exit 1
+        fi
+        if [[ ! -r "/ssl/${name}" ]]; then
+            log_fatal "/ssl/${name} does not exist or cannot be read."
+            log_fatal "Put the certificate and key into /ssl, or turn ssl off."
+            exit 1
+        fi
+    done
+    install -d -o 5984 -g 5984 -m 0700 "${TLS_DIR}"
+    install -o 5984 -g 5984 -m 0644 "/ssl/${CERTFILE}" "${TLS_DIR}/cert.pem"
+    install -o 5984 -g 5984 -m 0600 "/ssl/${KEYFILE}" "${TLS_DIR}/key.pem"
+    SSL_BLOCK="[ssl]
+enable = true
+port = 6984
+cert_file = ${TLS_DIR}/cert.pem
+key_file = ${TLS_DIR}/key.pem"
+    log_info "HTTPS is on: /ssl/${CERTFILE}, port 6984."
+fi
+
 # ─── Write the configuration (pitfall a) ──────────────────────────────────────
 # Everything that has to survive a container rebuild lives here, not only in
 # the REST state. The password goes into [admins] in clear text; CouchDB
@@ -117,6 +210,8 @@ single_node = true
 max_document_size = 50000000
 
 [chttpd]
+; 0.0.0.0 inside the container: the MCP add-on reaches CouchDB over the
+; internal add-on network. The host never publishes this port (see above).
 bind_address = 0.0.0.0
 port = 5984
 require_valid_user = true
@@ -142,6 +237,8 @@ ${CORS_HEADERS_LINE}
 
 [log]
 level = ${LOG_LEVEL}
+
+${SSL_BLOCK}
 
 [admins]
 ${ADMIN_USER} = ${ADMIN_PASSWORD}
@@ -191,6 +288,22 @@ until curl -sf http://127.0.0.1:5984/_up > /dev/null 2>&1; do
 done
 log_info "CouchDB is ready."
 
+# With ssl on, the HTTPS listener has to come up too. Otherwise Obsidian could
+# not connect at all, and nobody should be tempted to publish 5984 instead.
+if [[ "${SSL}" == "true" ]]; then
+    ELAPSED=0
+    until curl -sfk https://127.0.0.1:6984/_up > /dev/null 2>&1; do
+        ELAPSED=$((ELAPSED + 2))
+        if [[ ${ELAPSED} -ge 30 ]]; then
+            log_fatal "The HTTPS listener on 6984 did not come up within 30s."
+            log_fatal "Check that certfile and keyfile are a matching PEM pair."
+            cleanup 1
+        fi
+        sleep 2
+    done
+    log_info "HTTPS listener is ready on port 6984."
+fi
+
 # ─── Provisioning ─────────────────────────────────────────────────────────────
 AUTH=(-u "${ADMIN_USER}:${ADMIN_PASSWORD}")
 API=http://127.0.0.1:5984
@@ -224,10 +337,15 @@ if [[ "${code}" != "401" ]]; then
 fi
 log_info "Mandatory login is in effect (without credentials: HTTP 401)."
 
-log_info "Fauxton: http://<your-ha-ip>:5984/_utils/"
-log_info "LiveSync URL for Obsidian: http://<your-ha-ip>:5984"
-log_warn "Obsidian Mobile only connects over HTTPS. The phone needs a tunnel"
-log_warn "or a reverse proxy with a certificate."
+if [[ "${SSL}" == "true" ]]; then
+    log_info "LiveSync URL for Obsidian: https://<host-name-in-the-certificate>:6984"
+    log_info "Fauxton: https://<host-name-in-the-certificate>:6984/_utils/"
+    log_info "Publish 6984/tcp under Network to reach it from the LAN."
+else
+    log_info "HTTPS is off. Only other add-ons reach CouchDB, over the internal"
+    log_info "network (for example http://local-obsidian-couchdb:5984)."
+    log_info "To connect Obsidian, turn ssl on or put a TLS proxy add-on in front."
+fi
 
 # ─── Supervise the main process ───────────────────────────────────────────────
 set +e

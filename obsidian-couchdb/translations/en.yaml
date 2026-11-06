@@ -27,10 +27,24 @@ configuration:
       Optional, comma-separated header names the client may send in addition to
       the usual ones, for example cf-access-client-id, cf-access-client-secret
       when a proxy checks a token. Leave empty if you do not use one.
+  ssl:
+    name: HTTPS
+    description: >-
+      Serve HTTPS on port 6984 with the certificate from /ssl. Needed for
+      Obsidian to connect directly; plain HTTP is never offered to the network.
+  certfile:
+    name: Certificate file
+    description: Certificate (PEM, full chain), relative to /ssl.
+  keyfile:
+    name: Key file
+    description: Private key (PEM), relative to /ssl.
   log_level:
     name: Log level
     description: >-
       CouchDB log level. Use warning for everyday operation; debug writes a lot
       and fills the add-on log.
 network:
-  5984/tcp: CouchDB HTTP API and Fauxton web interface
+  5984/tcp: >-
+    Plain HTTP for other add-ons only. Leave empty: the add-on refuses to start
+    if this port is published.
+  6984/tcp: HTTPS for Obsidian and Fauxton (needs the HTTPS option)
