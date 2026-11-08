@@ -53,6 +53,7 @@ jobs:
             obsidian-mcp/config.yaml \
             obsidian-mcp/translations/de.yaml \
             obsidian-mcp/translations/en.yaml \
+            .github/dependabot.yml \
             .github/workflows/lint.yml
 
   shellcheck:
