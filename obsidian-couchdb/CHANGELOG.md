@@ -11,6 +11,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   had no host port and then linked to port `None`. Fauxton is at
   `https://<host>:6984/_utils/` once `ssl` is on and 6984 is published.
 
+### Notes
+
+- The port check and the watchdog are verified on Home Assistant OS (Dell
+  Wyse): a published 5984 stops the add-on with the message naming the port,
+  and the watchdog probes the unpublished 5984 without false restarts.
+
 ## [0.2.0] - 2026-11-06
 
 ### Security

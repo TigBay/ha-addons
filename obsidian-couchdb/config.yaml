@@ -85,7 +85,6 @@ panel_icon: "mdi:database-sync-outline"
 # The watchdog cannot send credentials. run.sh therefore sets
 # "require_valid_user_except_for_up = true": /_up answers without
 # authentication, every other path still answers 401. Verified in the PoC.
-# Without host_network the Supervisor should probe the container address and
-# the container port, so the unpublished 5984 should still work here. Not yet
-# verified on hardware.
+# Without host_network the Supervisor probes the container address and the
+# container port, so the unpublished 5984 works here. Verified on a Dell Wyse.
 watchdog: "http://[HOST]:[PORT:5984]/_up"
