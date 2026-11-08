@@ -7,7 +7,7 @@ assistant over the [Model Context Protocol](https://modelcontextprotocol.io/).
 It reads and writes notes directly in CouchDB — Obsidian does not have to be
 open, and the laptop does not have to be on.
 
-It runs [obsidian-sync-mcp](https://github.com/es617/obsidian-sync-mcp) v0.10.0
+It runs [obsidian-sync-mcp](https://github.com/es617/obsidian-sync-mcp) v0.11.0
 and needs the **Obsidian LiveSync Server** add-on (or another CouchDB) as its
 backend.
 
