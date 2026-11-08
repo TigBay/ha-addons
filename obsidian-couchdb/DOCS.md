@@ -54,6 +54,10 @@ To connect Obsidian directly:
 3. Set `ssl: true` (and `certfile`/`keyfile` if your files have other names).
 4. Under *Network*, enter a host port for **6984/tcp**. Leave 5984/tcp empty.
 
+Fauxton, the CouchDB web interface, is then at
+`https://<host-name>:6984/_utils/`. The add-on page has no *Open Web UI*
+button: the Supervisor would show it even without a host port for 6984.
+
 The alternative is a TLS proxy or tunnel add-on (NGINX Proxy Manager,
 Cloudflare Tunnel, Tailscale) that reaches `http://local-obsidian-couchdb:5984`
 over the internal network and offers HTTPS to the outside. Then `ssl` can stay
@@ -146,8 +150,7 @@ Obsidian upload the vault fresh with "Initialise or overwrite the remote".
 - **AppArmor is off.** CouchDB brings a complete Erlang runtime; an untested
   profile breaks the add-on in ways that are hard to diagnose. A profile will
   follow once it has been tested on real hardware.
-- **`/_utils/` (Fauxton) asks for credentials**, including through the
-  Home Assistant panel. That is intended: mandatory login applies to every path
+- **`/_utils/` (Fauxton) asks for credentials.** That is intended: mandatory login applies to every path
   except `/_up`.
 - **No multi-node setup.** The add-on configures a single node
   (`single_node = true`). That is the right shape for a home server and the
@@ -169,8 +172,7 @@ Obsidian upload the vault fresh with "Initialise or overwrite the remote".
   200 with them; the port check refused a published 5984 against a simulated
   Supervisor. Not yet checked on a real Supervisor: the watchdog with 5984
   unpublished (expected to work, because the Supervisor probes the container
-  port) and the *Open Web UI* button, which only appears when 6984 is
-  published.
+  port).
 - **Plain HTTP stays inside the host.** Other add-ons still talk to 5984 over
   the internal Docker network in clear text. Reading that traffic needs a
   compromised add-on on the same machine, not just a seat on the LAN.

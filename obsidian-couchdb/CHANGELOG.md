@@ -3,6 +3,14 @@
 All notable changes to this add-on are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.1] - 2026-11-08
+
+### Fixed
+
+- Removed the *Open Web UI* button. The Supervisor showed it even when 6984
+  had no host port and then linked to port `None`. Fauxton is at
+  `https://<host>:6984/_utils/` once `ssl` is on and 6984 is published.
+
 ## [0.2.0] - 2026-11-06
 
 ### Security
