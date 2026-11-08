@@ -13,6 +13,10 @@ on:
   pull_request:
     branches: [main]
 
+# Lint jobs only read the repository.
+permissions:
+  contents: read
+
 jobs:
   yamllint:
     name: Check YAML syntax
@@ -20,6 +24,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -55,6 +61,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Run ShellCheck
         uses: ludeeus/action-shellcheck@2.0.0
@@ -73,6 +81,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Run Hadolint (Dockerfile linter)
         uses: hadolint/hadolint-action@v3.1.0
@@ -91,6 +101,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Check Markdown links
         uses: gaurav-nelson/github-action-markdown-link-check@v1
@@ -110,6 +122,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v5
