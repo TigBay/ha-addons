@@ -8,7 +8,7 @@
 # for chunk compatibility with the LiveSync plugin.
 # =============================================================================
 
-FROM ghcr.io/es617/obsidian-sync-mcp:v0.10.0
+FROM ghcr.io/es617/obsidian-sync-mcp:v0.11.0
 
 # Build steps need root, and the add-on also starts as root: run.sh has to fix
 # the ownership of /data (root-owned in an add-on) before the server can use it.

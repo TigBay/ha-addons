@@ -3,6 +3,26 @@
 All notable changes to this add-on are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.1] - 2026-11-08
+
+### Changed
+
+- Upstream obsidian-sync-mcp v0.11.0 (was v0.10.0). The bundled
+  livesync-commonlib is unchanged, so the chunk format stays the same.
+
+### Fixed
+
+- From upstream: `move_note` no longer deletes the note when only the case of
+  the name changes (`Foo.md` → `foo.md`) on a vault with case-insensitive
+  file names, the LiveSync default. It now renames the note.
+- From upstream: links with a `#heading` or `#^block` suffix and Markdown
+  links to notes now count as backlinks. The index rebuilds at startup.
+
+### Notes
+
+- Upstream v0.11.0 also adds binary attachments behind
+  `ATTACHMENTS_ENABLED`. The add-on does not set it, so they stay off.
+
 ## [0.2.0] - 2026-11-06
 
 ### Security
