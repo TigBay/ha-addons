@@ -18,7 +18,7 @@
 
 | Add-on | Version | What it does |
 |---|---|---|
-| [**Obsidian LiveSync Server**](obsidian-couchdb/DOCS.md) | 0.2.0 | CouchDB as the sync backend for the Obsidian plugin Self-hosted LiveSync |
+| [**Obsidian LiveSync Server**](obsidian-couchdb/DOCS.md) | 0.2.1 | CouchDB as the sync backend for the Obsidian plugin Self-hosted LiveSync |
 | [**Obsidian MCP Server**](obsidian-mcp/DOCS.md) | 0.2.0 | Reads and writes the end-to-end encrypted vault over MCP, with its own OAuth 2.1 provider, so claude.ai can connect |
 
 Both add-ons are **built on your device** by the Supervisor from their
