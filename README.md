@@ -89,10 +89,14 @@ On Home Assistant OS, amd64 (Dell Wyse), with version **0.1.x**:
 | Obsidian on an iPhone with LiveSync through the tunnel and Cloudflare Access (service token in custom headers) | download and upload ✅ |
 | claude.ai connector over OAuth (registration, password page, token) | ✅ |
 
-Version **0.2.0** (HTTPS options, port check) is tested in local Docker only,
-against a simulated Supervisor. Not yet tested on a real Supervisor: whether
-`hassio_api` allows the port check, the watchdog with the unpublished port and
-the `webui` link on 6984.
+On the same machine with version **0.2.x**:
+
+| Check | Result |
+|---|---|
+| Port check over `hassio_api` with 5984 and 8787 published | both add-ons stop with a message naming the host port, and start once the port is cleared ✅ |
+| Watchdog with 5984 and 8787 unpublished | probes the container port, no false restarts ✅ |
+| *Open Web UI* link on 6984 | shown even without a host port, pointing to port `None`; removed in 0.2.1 |
+| HTTPS listener on 6984 and 8443 with a certificate from `/ssl` | tested in local Docker only |
 
 ## Security
 

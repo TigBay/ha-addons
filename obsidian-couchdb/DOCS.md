@@ -166,13 +166,10 @@ Obsidian upload the vault fresh with "Initialise or overwrite the remote".
   CORS preflight with `401` unless CouchDB lists it in `[cors] headers`. Put the
   names in the `cors_headers` option. Verified by hand: without the entry the
   preflight answered `401`, with it `204`.
-- **The HTTPS listener and the port check are not yet verified on Home
-  Assistant hardware.** Both were tested in local Docker: HTTPS on 6984
-  answered `/_up` with 200 and the database with 401 without credentials and
-  200 with them; the port check refused a published 5984 against a simulated
-  Supervisor. Not yet checked on a real Supervisor: the watchdog with 5984
-  unpublished (expected to work, because the Supervisor probes the container
-  port).
+- **The HTTPS listener is not yet verified on Home Assistant hardware.** In
+  local Docker, HTTPS on 6984 answered `/_up` with 200 and the database with
+  401 without credentials and 200 with them. The port check and the watchdog
+  with 5984 unpublished are verified on Home Assistant OS.
 - **Plain HTTP stays inside the host.** Other add-ons still talk to 5984 over
   the internal Docker network in clear text. Reading that traffic needs a
   compromised add-on on the same machine, not just a seat on the LAN.

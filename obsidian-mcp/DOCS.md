@@ -183,13 +183,10 @@ CouchDB.
   both revisions stay readable — but resolve conflicts in Obsidian promptly.
   Edits on different lines are merged automatically.
 - **Only built locally so far**, like the CouchDB add-on.
-- **HTTPS and the port check are not yet verified on Home Assistant
-  hardware.** Tested in local Docker: an MCP `initialize` over HTTPS on 8443
-  succeeded with the token and answered 401 without it, server-sent events
-  streamed through, and the port check refused a published 8787 against a
-  simulated Supervisor. Not yet checked on a real Supervisor: the watchdog
-  with 8787 unpublished (expected to work, because the Supervisor probes the
-  container port).
+- **HTTPS is not yet verified on Home Assistant hardware.** In local Docker,
+  an MCP `initialize` over HTTPS on 8443 succeeded with the token and answered
+  401 without it, and server-sent events streamed through. The port check and
+  the watchdog with 8787 unpublished are verified on Home Assistant OS.
 - **Plain HTTP stays inside the host.** Tunnel and proxy add-ons reach 8787
   over the internal Docker network in clear text. Reading that traffic needs a
   compromised add-on on the same machine, not just a seat on the LAN.

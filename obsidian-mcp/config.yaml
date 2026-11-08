@@ -87,7 +87,6 @@ schema:
 panel_icon: "mdi:robot-outline"
 
 # /health answers without a token, unlike /mcp. Verified in the PoC.
-# Without host_network the Supervisor should probe the container address and
-# the container port, so the unpublished 8787 should still work here. Not yet
-# verified on hardware.
+# Without host_network the Supervisor probes the container address and the
+# container port, so the unpublished 8787 works here. Verified on a Dell Wyse.
 watchdog: "http://[HOST]:[PORT:8787]/health"
