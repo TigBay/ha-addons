@@ -4,26 +4,25 @@
 
 [![Add repository to Home Assistant](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FTigBay%2Fha-addons)
 
-> **Your Obsidian vault on your own hardware.** Sync between your devices with
-> Self-hosted LiveSync, end-to-end encrypted, and give an AI assistant such as
-> Claude access to it over MCP — without a laptop that has to stay on.
+Two Home Assistant add-ons that keep an Obsidian vault on your own server. One
+is the CouchDB backend for the [Self-hosted LiveSync](https://github.com/vrtmrz/obsidian-livesync)
+plugin, the other is an MCP server that lets an AI assistant such as Claude
+read and edit the vault. Both run on the Home Assistant machine, so no laptop
+has to stay on.
 
-> **Unofficial:** community add-ons, not affiliated with Obsidian, Self-hosted
-> LiveSync, obsidian-sync-mcp, the CouchDB project or the Apache Software
-> Foundation, and neither supported nor endorsed by them.
+These are unofficial community add-ons. They are not affiliated with or
+endorsed by Obsidian, Self-hosted LiveSync, obsidian-sync-mcp or the Apache
+CouchDB project.
 
----
+## Add-ons
 
-## Add-ons in this repository
-
-| Add-on | Version | What it does |
+| Add-on | Version | Purpose |
 |---|---|---|
-| [**Obsidian LiveSync Server**](obsidian-couchdb/DOCS.md) | 0.2.1 | CouchDB as the sync backend for the Obsidian plugin Self-hosted LiveSync |
-| [**Obsidian MCP Server**](obsidian-mcp/DOCS.md) | 0.2.1 | Reads and writes the end-to-end encrypted vault over MCP, with its own OAuth 2.1 provider, so claude.ai can connect |
+| [Obsidian LiveSync Server](obsidian-couchdb/DOCS.md) | 0.2.1 | CouchDB database that LiveSync syncs your devices through |
+| [Obsidian MCP Server](obsidian-mcp/DOCS.md) | 0.2.1 | MCP endpoint for the vault, with its own OAuth login so claude.ai can add it as a connector |
 
-Both add-ons are **built on your device** by the Supervisor from their
-`Dockerfile`; there is no prebuilt image. The first installation therefore
-takes a little longer.
+The Supervisor builds both add-ons on your machine from their `Dockerfile`.
+There are no prebuilt images, so the first installation takes a minute or two.
 
 ```mermaid
 flowchart LR
@@ -34,87 +33,87 @@ flowchart LR
     end
 ```
 
-The notes are encrypted on the device before they reach CouchDB. The MCP
-server needs the passphrase to read them, so it can decrypt the vault — see
-the [MCP documentation](obsidian-mcp/DOCS.md#3-the-passphrase) for what that
-means for the host.
+LiveSync encrypts your notes on each device before uploading them, so CouchDB
+only stores encrypted data. The MCP server is different: it needs your
+passphrase to read the notes and can therefore decrypt the whole vault. The
+[MCP documentation](obsidian-mcp/DOCS.md#3-the-passphrase) explains what that
+means for the machine it runs on.
 
-## Breaking change in 0.2.0
+## How your devices connect
 
-Neither add-on serves plain HTTP to the network any more. Ports 5984 (CouchDB)
-and 8787 (MCP) are no longer published, and each add-on **refuses to start**
-while one of them still has a host port — including one kept from an earlier
-version. Clear the port under **Network** in the add-on settings.
+Neither add-on accepts plain HTTP from the network. Obsidian on a phone only
+connects over HTTPS, and claude.ai needs a public HTTPS address. You have two
+options:
 
-To reach the add-ons from other devices, either
+- **Tunnel or reverse proxy.** An add-on such as Cloudflare Tunnel connects to
+  CouchDB on port 5984 and to the MCP server on port 8787 over the internal
+  network and offers HTTPS to the outside. This is the setup I use and have
+  tested.
+- **Built-in HTTPS.** Turn on the `ssl` option, put a certificate for your
+  host name into `/ssl` and publish port 6984 (CouchDB) or 8443 (MCP). This
+  has only been tested in local Docker so far.
 
-- turn on the `ssl` option and publish the HTTPS port (6984 for CouchDB, 8443
-  for MCP), with a certificate under `/ssl` that is valid for the host name you
-  connect to, or
-- put a tunnel or proxy add-on in front of them, for example Cloudflare Tunnel,
-  which reaches them over the internal network.
+## Upgrading from 0.1.x
 
-Details are in the changelogs of [CouchDB](obsidian-couchdb/CHANGELOG.md) and
-[MCP](obsidian-mcp/CHANGELOG.md).
+Version 0.2.0 stopped publishing ports 5984 and 8787, because both served
+plain HTTP. If one of them still has a host port from an older installation,
+the add-on stops at startup and the log names the port. Clear it under
+**Network** in the add-on settings and pick one of the options above. The
+changelogs of [CouchDB](obsidian-couchdb/CHANGELOG.md) and
+[MCP](obsidian-mcp/CHANGELOG.md) have the details.
 
 ## Requirements
 
 - Home Assistant OS or Home Assistant Supervised
-- Architecture `amd64` or `aarch64` (aarch64 has never run on real hardware)
-- An HTTPS route to the add-ons from your devices: Obsidian on the phone only
-  connects over HTTPS, and claude.ai needs a public HTTPS address
+- `amd64` or `aarch64`. Only `amd64` has been tested on real hardware.
+- An HTTPS route from your devices to the add-ons, see above
 
 ## Installation
 
-> In recent Home Assistant versions, add-ons are called "apps". Menu names can differ depending on the version.
+Newer Home Assistant versions call add-ons "apps", so the menu names below
+may differ slightly.
 
-1. Click the badge above or go to **Settings → Add-ons → Add-on Store**
-2. Click **⋮** (three dots) → **Repositories**
-3. Add: `https://github.com/TigBay/ha-addons`
-4. Install **Obsidian LiveSync Server** first, then **Obsidian MCP Server** if you want AI access
-5. Follow the documentation of each add-on:
-   [LiveSync Server](obsidian-couchdb/DOCS.md#getting-started),
-   [MCP Server](obsidian-mcp/DOCS.md#getting-started)
+1. Click the "Add repository" badge above, or go to **Settings → Add-ons →
+   Add-on Store**, open the **⋮** menu, choose **Repositories** and add
+   `https://github.com/TigBay/ha-addons`.
+2. Install **Obsidian LiveSync Server** and follow its
+   [setup guide](obsidian-couchdb/DOCS.md#getting-started).
+3. If you want AI access, install **Obsidian MCP Server** and follow its
+   [setup guide](obsidian-mcp/DOCS.md#getting-started).
 
-## Tested
+## Testing
 
-On Home Assistant OS, amd64 (Dell Wyse), with version **0.1.x**:
+I run both add-ons on a Dell Wyse (amd64) with Home Assistant OS, behind
+Cloudflare Tunnel and Cloudflare Access. Tested there:
 
-| Check | Result |
-|---|---|
-| Installation, add-on update, rebuild, host reboot | data kept, mandatory login and CORS settings kept |
-| Partial backup and restore of both add-ons | database restored, MCP index rebuilt |
-| MCP server reaches CouchDB by the internal host name `local-obsidian-couchdb` | ✅ |
-| Cloudflare Tunnel (remote managed) to `local-obsidian-couchdb:5984` and `local-obsidian-mcp:8787` | ✅ |
-| Obsidian on an iPhone with LiveSync through the tunnel and Cloudflare Access (service token in custom headers) | download and upload ✅ |
-| claude.ai connector over OAuth (registration, password page, token) | ✅ |
+- installation, updates, rebuilds and host reboots keep the data and settings
+- partial backup and restore of both add-ons
+- LiveSync on an iPhone through the tunnel, with the Cloudflare Access service
+  token sent as custom headers
+- the claude.ai connector over OAuth: reading, writing, searching, renaming
+  and deleting notes
+- the startup check stops an add-on while 5984 or 8787 is published, and the
+  watchdog works with both ports unpublished
 
-On the same machine with version **0.2.x**:
-
-| Check | Result |
-|---|---|
-| Port check over `hassio_api` with 5984 and 8787 published | both add-ons stop with a message naming the host port, and start once the port is cleared ✅ |
-| Watchdog with 5984 and 8787 unpublished | probes the container port, no false restarts ✅ |
-| *Open Web UI* link on 6984 | shown even without a host port, pointing to port `None`; removed in 0.2.1 |
-| MCP update 0.2.0 → 0.2.1 (obsidian-sync-mcp v0.11.0) | index rebuilt (535 notes), OAuth tokens kept, Cloudflare Tunnel unchanged ✅ |
-| claude.ai connector after the update: write, case-only rename, read, search, delete | note kept on `Foo.md` → `foo.md` ✅ |
-| HTTPS listener on 6984 and 8443 with a certificate from `/ssl` | tested in local Docker only |
+Not tested on real hardware yet: the built-in HTTPS listeners on 6984 and 8443
+(tested in local Docker) and `aarch64`.
 
 ## Security
 
-- Both add-ons refuse to start without a password (CouchDB) or bearer token (MCP).
-- No plain-HTTP port on the network, see above.
-- Passwords, the token and the LiveSync passphrase are stored in clear text in
-  the add-on options and therefore in every Home Assistant backup. **Protect
-  your backups with a password.**
-- `write_folders` limits which folders the MCP server may change. Empty means
+- Neither add-on starts without a password (CouchDB) or a token (MCP).
+- Passwords, the MCP token and the LiveSync passphrase are stored in plain text
+  in the add-on options, and therefore in every Home Assistant backup. Make
+  sure your backups are encrypted.
+- `write_folders` limits the folders the MCP server may change. Empty means
   the whole vault.
-- **Prompt injection:** an AI assistant with access to the vault reads every
-  note it opens. Do not keep untrusted content where it has write access.
+- An AI assistant reads every note it opens, including text written to steer
+  it (prompt injection), for example in web clippings. If your vault holds
+  content from sources you do not trust, keep write access narrow with
+  `write_folders`.
 - AppArmor is off for both add-ons until a profile has been tested on real
   hardware.
 
-More in the *Known limitations* sections of both documentations.
+Each add-on's documentation lists more under *Known limitations*.
 
 ## Development
 
@@ -126,34 +125,40 @@ cd ha-addons
 docker build -t obsidian-couchdb-test ./obsidian-couchdb/
 docker build -t obsidian-mcp-test ./obsidian-mcp/
 
-# YAML (same rules as in .github/workflows/lint.yml)
+# YAML (same rules as .github/workflows/lint.yml)
 pip install yamllint
 yamllint --config-data '{extends: default, rules: {line-length: {max: 120}, document-start: disable, truthy: {check-keys: false, allowed-values: ["true", "false"]}}}' \
-  repository.yaml obsidian-*/config.yaml obsidian-*/translations/*.yaml .github/workflows/*.yml
+  repository.yaml obsidian-*/config.yaml obsidian-*/translations/*.yaml .github/*.yml .github/workflows/*.yml
 
-# Shell
+# Shell scripts
 shellcheck obsidian-*/run.sh
 
-# Dockerfiles
+# Dockerfiles (same ignores as the lint workflow)
 for d in obsidian-couchdb obsidian-mcp; do
-  docker run --rm -i hadolint/hadolint hadolint --ignore DL3006 --ignore DL3008 --ignore DL3018 --ignore DL3025 - < "$d/Dockerfile"
+  docker run --rm -i hadolint/hadolint hadolint \
+    --ignore DL3006 --ignore DL3008 --ignore DL3016 --ignore DL3018 --ignore DL3025 - < "$d/Dockerfile"
 done
 
 # GitHub Actions workflows
 docker run --rm -v "$PWD":/repo -w /repo rhysd/actionlint:latest
 ```
 
-### Release process
+### Releasing a new version
 
-1. Raise the version in `<add-on>/config.yaml` (SemVer)
-2. Update `<add-on>/CHANGELOG.md`
-3. Open a pull request against `main`; the lint workflow must pass
-4. After the merge, Home Assistant offers the update and builds it on the device
+1. Raise `version` in `<add-on>/config.yaml` (SemVer). Home Assistant only
+   rebuilds an add-on when this number changes.
+2. Add an entry to `<add-on>/CHANGELOG.md`.
+3. Open a pull request against `main`. The lint workflow has to pass.
+4. After the merge, Home Assistant offers the update and builds it on the
+   device.
+
+Dependabot opens pull requests for new base images. They need steps 1 and 2
+before they can be merged.
 
 ## License
 
-These add-ons are licensed under the MIT license, see [LICENSE](LICENSE). They
-bundle or depend on software from other projects under their own terms:
+The add-ons are MIT licensed, see [LICENSE](LICENSE). They are built on or
+work with these projects, each under its own license:
 
 | Component | License |
 |-----------|---------|
@@ -162,6 +167,4 @@ bundle or depend on software from other projects under their own terms:
 | [bashio](https://github.com/hassio-addons/bashio) (in both images) | MIT |
 | [Self-hosted LiveSync](https://github.com/vrtmrz/obsidian-livesync) (Obsidian plugin, installed by you) | MIT |
 
----
-
-**Created by [TigBay](https://github.com/TigBay)** | [Report issues](https://github.com/TigBay/ha-addons/issues)
+Bugs and questions: [GitHub issues](https://github.com/TigBay/ha-addons/issues).
