@@ -96,6 +96,8 @@ On the same machine with version **0.2.x**:
 | Port check over `hassio_api` with 5984 and 8787 published | both add-ons stop with a message naming the host port, and start once the port is cleared ✅ |
 | Watchdog with 5984 and 8787 unpublished | probes the container port, no false restarts ✅ |
 | *Open Web UI* link on 6984 | shown even without a host port, pointing to port `None`; removed in 0.2.1 |
+| MCP update 0.2.0 → 0.2.1 (obsidian-sync-mcp v0.11.0) | index rebuilt (535 notes), OAuth tokens kept, Cloudflare Tunnel unchanged ✅ |
+| claude.ai connector after the update: write, case-only rename, read, search, delete | note kept on `Foo.md` → `foo.md` ✅ |
 | HTTPS listener on 6984 and 8443 with a certificate from `/ssl` | tested in local Docker only |
 
 ## Security
