@@ -1,0 +1,37 @@
+---
+# ==============================================================================
+# Dependabot – update pull requests for base images and GitHub Actions
+#
+# Home Assistant only rebuilds an add-on when its version changes. A pull
+# request that bumps a base image therefore also needs a version bump in
+# config.yaml and a CHANGELOG.md entry before it is merged.
+# ==============================================================================
+version: 2
+
+updates:
+  - package-ecosystem: docker
+    directory: /obsidian-couchdb
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build
+      include: scope
+
+  - package-ecosystem: docker
+    directory: /obsidian-mcp
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: build
+      include: scope
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci
+      include: scope
